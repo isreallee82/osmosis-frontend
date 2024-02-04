@@ -20,6 +20,38 @@ export const WalletRegistry: RegistryWallet[] = [
     features: ["notifications"],
   },
   {
+    ...CosmosKitWalletList["exodus-extension"],
+    logo: "/wallets/exodus.png",
+    lazyInstall: () =>
+      import("@cosmos-kit/exodus-extension").then(
+        (m) => m.ExodusExtensionWallet
+      ),
+    windowPropertyName: "exodus",
+    async supportsChain(chainId) {
+      const trustAvailableChains: MainnetChainIds[] = [
+        "cosmoshub-4",
+        "osmosis-1",
+        "stride-1",
+        "neutron-1",
+        "agoric-3",
+        "axelar-dojo-1",
+        "evmos_9001-2",
+        "injective-1",
+        "stargaze-1",
+        "columbus-5",
+        "laozi-mainnet",
+        "crypto-org-chain-mainnet-1",
+        "kava_2222-10",
+      ];
+
+      return trustAvailableChains.includes(chainId as MainnetChainIds);
+    },
+    stakeUrl:
+      "https://www.exodus.com/support/en/articles/8611395-how-do-i-stake-algo-with-algorand-s-community-governance-program#period",
+    governanceUrl: "https://www.exodus.com",
+    features: [],
+  },
+  {
     ...CosmosKitWalletList["keplr-mobile"],
     logo: "/wallets/keplr.svg",
     lazyInstall: () =>

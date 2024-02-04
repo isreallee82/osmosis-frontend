@@ -1,6 +1,7 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import { Wallet } from "@cosmos-kit/core";
 import { cosmostationExtensionInfo } from "@cosmos-kit/cosmostation-extension";
+import { exodusExtensionInfo } from "@cosmos-kit/exodus-extension";
 import { keplrExtensionInfo } from "@cosmos-kit/keplr-extension";
 import { keplrMobileInfo } from "@cosmos-kit/keplr-mobile";
 import { leapExtensionInfo } from "@cosmos-kit/leap-extension";
@@ -15,6 +16,7 @@ import * as prettier from "prettier";
 import { isFunction } from "~/utils/assertion";
 
 const CosmosKitWalletList = [
+  exodusExtensionInfo,
   keplrExtensionInfo,
   keplrMobileInfo,
   leapExtensionInfo,
