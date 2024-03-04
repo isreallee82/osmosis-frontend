@@ -46,7 +46,12 @@ const DenomQueryParamKey = "denom";
 export const AssetsPageV1: FunctionComponent = observer(() => {
   const { isMobile } = useWindowSize();
   const { assetsStore } = useStore();
-  const { nativeBalances, ibcBalances, unverifiedIbcBalances } = assetsStore;
+  const {
+    nativeBalances,
+    ibcBalances,
+    unverifiedIbcBalances,
+    unverifiedNativeBalances,
+  } = assetsStore;
   const { t } = useTranslation();
   const flags = useFeatureFlags();
 
@@ -246,9 +251,9 @@ export const AssetsPageV1: FunctionComponent = observer(() => {
         />
       )}
       <AssetsOverview />
-
       <AssetsTableV1
         nativeBalances={nativeBalances}
+        unverifiedNativeBalances={unverifiedNativeBalances}
         ibcBalances={ibcBalances}
         unverifiedIbcBalances={unverifiedIbcBalances}
         onDeposit={onTableDeposit}
@@ -495,11 +500,13 @@ const PoolCardsDisplayer: FunctionComponent<{ poolIds: string[] }> = observer(
             {
               label: t("assets.poolCards.liquidity"),
               value: (
-                <DesktopOnlyPrivateText
-                  text={sharePoolDetail.userAvailableValue
-                    .maxDecimals(2)
-                    .toString()}
-                />
+                <h6>
+                  <DesktopOnlyPrivateText
+                    text={sharePoolDetail.userAvailableValue
+                      .maxDecimals(2)
+                      .toString()}
+                  />
+                </h6>
               ),
             },
             queryOsmosis.queryIncentivizedPools.isIncentivized(poolId)

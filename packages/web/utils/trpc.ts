@@ -1,9 +1,11 @@
 import "~/utils/superjson";
 
+import { logEvent } from "@amplitude/analytics-browser";
 import { httpBatchLink, httpLink, loggerLink, splitLink } from "@trpc/client";
 import { createTRPCNext } from "@trpc/next";
 import { type inferRouterInputs, type inferRouterOutputs } from "@trpc/server";
 
+import { EventName } from "~/config";
 import { type AppRouter } from "~/server/api/root";
 import { superjson } from "~/utils/superjson";
 
@@ -34,6 +36,20 @@ const makeSkipBatchLink = (url: string) =>
 export const api = createTRPCNext<AppRouter>({
   config() {
     return {
+      queryClientConfig: {
+        defaultOptions: {
+          queries: {
+            onError: (error: any) => {
+              logEvent(EventName.QueryError, {
+                errorMessage:
+                  error instanceof Error ? error.message : String(error),
+              });
+            },
+            retry: 3, // Number of retry attempts
+          },
+        },
+      },
+
       /**
        * Transformer used for data de-serialization from the server.
        *
@@ -67,6 +83,14 @@ export const api = createTRPCNext<AppRouter>({
           const servers = {
             node: makeSkipBatchLink(`${getBaseUrl()}/api/trpc`)(runtime),
             edge: makeSkipBatchLink(`${getBaseUrl()}/api/edge-trpc`)(runtime),
+
+            /**
+             * Create a separate link for the pools edge server since its query is too expensive
+             * and it's slowing the other queries down because of JS single threaded nature.
+             */
+            poolsEdge: makeSkipBatchLink(`${getBaseUrl()}/api/pools-edge-trpc`)(
+              runtime
+            ),
           };
 
           return (ctx) => {
@@ -85,7 +109,16 @@ export const api = createTRPCNext<AppRouter>({
              * If the base path is not `edge`, we can just call the node server directly.
              */
             const isEdge = basePath === "edge";
-            const link = isEdge ? servers["edge"] : servers["node"];
+            const isPoolsEdge = isEdge && possibleEdgePath.startsWith("pools");
+
+            let link: (typeof servers)["node"];
+            if (isEdge && !isPoolsEdge) {
+              link = servers["edge"];
+            } else if (isPoolsEdge && possibleEdgePath.startsWith("pools")) {
+              link = servers["poolsEdge"];
+            } else {
+              link = servers["node"];
+            }
 
             return isEdge
               ? link({
