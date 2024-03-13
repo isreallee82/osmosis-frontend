@@ -3,10 +3,12 @@ import { AssetList } from "@osmosis-labs/types";
 import cachified, { CacheEntry } from "cachified";
 import { LRUCache } from "lru-cache";
 
-import { DEFAULT_LRU_OPTIONS } from "~/config/cache";
 import { AssetLists } from "~/config/generated/asset-lists";
+import { EdgeDataLoader } from "~/utils/batching";
+import { DEFAULT_LRU_OPTIONS } from "~/utils/cache";
+import { captureErrorAndReturn } from "~/utils/error";
 
-import { queryCoingeckoCoin } from "../../coingecko";
+import { queryCoingeckoCoinIds, queryCoingeckoCoins } from "../../coingecko";
 import {
   queryAllTokenData,
   queryTokenMarketCaps,
@@ -32,22 +34,22 @@ export async function getMarketAsset<TAsset extends Asset>({
 }): Promise<TAsset & AssetMarketInfo> {
   const assetMarket = await cachified({
     cache: marketInfoCache,
-    key: asset.coinDenom + asset.coinMinimalDenom,
+    key: `market-asset-${asset.coinMinimalDenom}`,
     ttl: 1000 * 60 * 5, // 5 minutes
     getFreshValue: async () => {
-      const currentPrice = await getAssetPrice({ asset }).catch(() => {
-        // if not found, return undefined
-        return;
-      });
-      const marketCap = (
-        await queryTokenMarketCaps().catch(() => {
-          // if not found, return undefined
-          return undefined;
-        })
-      )?.find((mCap) => mCap.symbol === asset.coinDenom)?.market_cap;
+      const currentPrice = await getAssetPrice({ asset }).catch((e) =>
+        captureErrorAndReturn(e, undefined)
+      );
+      const marketCap = await getAssetMarketCap(asset).catch((e) =>
+        captureErrorAndReturn(e, undefined)
+      );
       const priceChange24h = (await getAssetMarketActivity(asset))
         ?.price_24h_change;
-      const marketCapRank = await getAssetMarketCapRank(asset);
+      const marketCapRank = (
+        await getCoingeckoCoin(asset).catch((e) =>
+          captureErrorAndReturn(e, undefined)
+        )
+      )?.market_cap_rank;
 
       return {
         currentPrice: currentPrice
@@ -84,28 +86,69 @@ export async function mapGetMarketAssets<TAsset extends Asset>({
 
 const assetMarketCache = new LRUCache<string, CacheEntry>(DEFAULT_LRU_OPTIONS);
 
-/** Gets the numerical market cap rank given a token symbol/denom.
- *  Returns `undefined` if a market cap is not available for the given symbol/denom. */
-async function getAssetMarketCapRank({
+/** Fetches and caches asset market capitalization. */
+async function getAssetMarketCap({
+  coinDenom,
+}: {
+  coinDenom: string;
+}): Promise<number | undefined> {
+  const marketCapsMap = await cachified({
+    cache: marketInfoCache,
+    key: "assetMarketCaps",
+    ttl: 1000 * 20, // 20 seconds
+    getFreshValue: async () => {
+      const marketCaps = await queryTokenMarketCaps();
+
+      return marketCaps.reduce((map, mCap) => {
+        return map.set(mCap.symbol, mCap.market_cap);
+      }, new Map<string, number>());
+    },
+  });
+
+  return marketCapsMap.get(coinDenom);
+}
+
+/** Used with `DataLoader` to make batched calls to CoinGecko.
+ *  This allows us to provide IDs in a batch to CoinGecko, which is more efficient than making individual calls. */
+async function batchFetchCoingeckoCoins(keys: readonly string[]) {
+  const coins = await queryCoingeckoCoins(keys as string[]);
+  return keys.map(
+    (key) =>
+      coins.find(({ id }) => id === key) ??
+      new Error(`No CoinGecko coin result for ${key}`)
+  );
+}
+const coingeckoCoinBatchLoader = new EdgeDataLoader(batchFetchCoingeckoCoins);
+
+/** Gets the CoinGecko coin object for a given CoinGecko ID.
+ *  Returns `undefined` if the token ID is not actively listed on CoinGecko. */
+async function getCoingeckoCoin({
   coinGeckoId,
 }: {
   coinGeckoId: string | undefined;
-}): Promise<number | undefined> {
+}) {
   if (!coinGeckoId) return;
+
+  // Given ID should be supported by CoinGecko
+  if (
+    !(await getActiveCoingeckoCoins()).some((coin) => coin.id === coinGeckoId)
+  )
+    return;
 
   return await cachified({
     cache: assetMarketCache,
-    ttl: 1000 * 60 * 15, // 15 minutes since market ranks don't change often
-    key: "market-cap-" + coinGeckoId,
-    getFreshValue: async () => {
-      try {
-        const coinGeckoCoin = await queryCoingeckoCoin(coinGeckoId);
+    ttl: 1000 * 60 * 5, // 5 minutes
+    key: "coingecko-coin-" + coinGeckoId,
+    getFreshValue: () => coingeckoCoinBatchLoader.load(coinGeckoId),
+  });
+}
 
-        return coinGeckoCoin.market_cap_rank;
-      } catch {
-        // ignore error and return undefined, since market cap rank is non-critical
-      }
-    },
+async function getActiveCoingeckoCoins() {
+  return await cachified({
+    cache: assetMarketCache,
+    ttl: 1000 * 60 * 60, // 1 hour
+    key: "coinGeckoIds",
+    getFreshValue: queryCoingeckoCoinIds,
   });
 }
 
@@ -118,18 +161,13 @@ async function getAssetMarketActivity({ coinDenom }: { coinDenom: string }) {
     ttl: 1000 * 60 * 5, // 5 minutes since there's price data
     key: "allTokenData",
     getFreshValue: async () => {
-      try {
-        const allTokenData = await queryAllTokenData();
+      const allTokenData = await queryAllTokenData();
 
-        const tokenInfoMap = new Map<string, TokenData>();
-        allTokenData.forEach((tokenData) => {
-          tokenInfoMap.set(tokenData.symbol, tokenData);
-        });
-        return tokenInfoMap;
-      } catch (error) {
-        console.error("Could not fetch token infos", error);
-        return new Map<string, TokenData>();
-      }
+      const tokenInfoMap = new Map<string, TokenData>();
+      allTokenData.forEach((tokenData) => {
+        tokenInfoMap.set(tokenData.symbol, tokenData);
+      });
+      return tokenInfoMap;
     },
   });
 

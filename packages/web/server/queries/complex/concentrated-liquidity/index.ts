@@ -10,7 +10,6 @@ import { maxTick, minTick, tickToSqrtPrice } from "@osmosis-labs/math";
 import cachified, { CacheEntry } from "cachified";
 import { LRUCache } from "lru-cache";
 
-import { DEFAULT_LRU_OPTIONS } from "~/config/cache";
 import { ChainList } from "~/config/generated/chain-list";
 import {
   calcCoinValue,
@@ -28,15 +27,18 @@ import { getValidatorInfo } from "~/server/queries/complex/staking/validator";
 import { ConcentratedPoolRawResponse } from "~/server/queries/osmosis";
 import {
   LiquidityPosition,
-  queryCLPosition,
-  queryCLPositions,
-  queryCLUnbondingPositions,
+  queryAccountPositions,
+  queryAccountUnbondingPositions,
+  queryPositionById,
 } from "~/server/queries/osmosis/concentratedliquidity";
 import {
-  queryDelegatedClPositions,
-  queryUndelegatingClPositions,
+  queryAccountDelegatedPositions,
+  queryAccountUndelegatingPositions,
 } from "~/server/queries/osmosis/superfluid";
+import timeout from "~/utils/async";
+import { DEFAULT_LRU_OPTIONS } from "~/utils/cache";
 import { aggregateCoinsByDenom } from "~/utils/coin";
+import { captureErrorAndReturn } from "~/utils/error";
 
 import { queryPositionPerformance } from "../../imperator";
 import { DEFAULT_VS_CURRENCY } from "../assets/config";
@@ -48,7 +50,7 @@ export async function getUserUnderlyingCoinsFromClPositions({
 }: {
   userOsmoAddress: string;
 }): Promise<CoinPretty[]> {
-  const clPositions = await queryCLPositions({
+  const clPositions = await queryAccountPositions({
     bech32Address: userOsmoAddress,
   });
 
@@ -148,7 +150,7 @@ export function getPriceFromSqrtPrice({
   return price;
 }
 
-export function getClTickPrice({
+export function getTickPrice({
   tick,
   baseCoin,
   quoteCoin,
@@ -169,25 +171,33 @@ const concentratedLiquidityCache = new LRUCache<string, CacheEntry>(
   DEFAULT_LRU_OPTIONS
 );
 
-function getUnbondingClPositions({ bech32Address }: { bech32Address: string }) {
+function getUserUnbondingPositions({
+  bech32Address,
+}: {
+  bech32Address: string;
+}) {
   return cachified({
     cache: concentratedLiquidityCache,
     key: `unbonding-cl-positions-${bech32Address}`,
-    ttl: 5 * 1000, // 5 seconds
-    getFreshValue: () => queryCLUnbondingPositions({ bech32Address }),
+    ttl: 1000 * 5, // 5 seconds
+    getFreshValue: () => queryAccountUnbondingPositions({ bech32Address }),
   });
 }
 
-function getDelegatedClPositions({ bech32Address }: { bech32Address: string }) {
+function getUserDelegatedPositions({
+  bech32Address,
+}: {
+  bech32Address: string;
+}) {
   return cachified({
     cache: concentratedLiquidityCache,
     key: `delegated-cl-positions-${bech32Address}`,
-    ttl: 5 * 1000, // 5 seconds
-    getFreshValue: () => queryDelegatedClPositions({ bech32Address }),
+    ttl: 1000 * 5, // 5 seconds
+    getFreshValue: () => queryAccountDelegatedPositions({ bech32Address }),
   });
 }
 
-function getUndelegatingClPositions({
+function getUserUndelegatingPositions({
   bech32Address,
 }: {
   bech32Address: string;
@@ -195,18 +205,18 @@ function getUndelegatingClPositions({
   return cachified({
     cache: concentratedLiquidityCache,
     key: `undelegating-cl-positions-${bech32Address}`,
-    ttl: 5 * 1000, // 5 seconds
-    getFreshValue: () => queryUndelegatingClPositions({ bech32Address }),
+    ttl: 1000 * 5, // 5 seconds
+    getFreshValue: () => queryAccountUndelegatingPositions({ bech32Address }),
   });
 }
 
-export type ClPositionDetails = Awaited<
-  ReturnType<typeof mapGetPositionDetails>
+export type UserPositionDetails = Awaited<
+  ReturnType<typeof mapGetUserPositionDetails>
 >[number];
 
 /** Appends user and position details to a given set of positions.
  *  If positions are not provided, they will be fetched with the given user address. */
-export async function mapGetPositionDetails({
+export async function mapGetUserPositionDetails({
   positions: initialPositions,
   userOsmoAddress,
 }: {
@@ -215,17 +225,17 @@ export async function mapGetPositionDetails({
 }) {
   const positionsPromise = initialPositions
     ? Promise.resolve(initialPositions)
-    : queryCLPositions({ bech32Address: userOsmoAddress }).then(
+    : queryAccountPositions({ bech32Address: userOsmoAddress }).then(
         ({ positions }) => positions
       );
   const lockableDurationsPromise = getLockableDurations();
-  const userUnbondingPositionsPromise = getUnbondingClPositions({
+  const userUnbondingPositionsPromise = getUserUnbondingPositions({
     bech32Address: userOsmoAddress,
   });
-  const delegatedPositionsPromise = getDelegatedClPositions({
+  const delegatedPositionsPromise = getUserDelegatedPositions({
     bech32Address: userOsmoAddress,
   });
-  const undelegatingPositionsPromise = getUndelegatingClPositions({
+  const undelegatingPositionsPromise = getUserUndelegatingPositions({
     bech32Address: userOsmoAddress,
   });
   const stakeCurrencyPromise = getAsset({
@@ -269,33 +279,38 @@ export async function mapGetPositionDetails({
       }
       const currentValue = new PricePretty(
         DEFAULT_VS_CURRENCY,
-        (await calcSumCoinsValue([baseCoin, quoteCoin])) ?? 0
+        await calcSumCoinsValue([baseCoin, quoteCoin])
       );
 
       const lowerTick = new Int(position.lower_tick);
       const upperTick = new Int(position.upper_tick);
-      const priceRangePromise = Promise.all([
-        getClTickPrice({
+      const priceRange = await Promise.all([
+        getTickPrice({
           tick: lowerTick,
           baseCoin,
           quoteCoin,
         }),
-        getClTickPrice({
+        getTickPrice({
           tick: upperTick,
           baseCoin,
           quoteCoin,
         }),
       ]);
-      const rangeAprPromise = getConcentratedRangePoolApr({
-        lowerTick: lowerTick.toString(),
-        upperTick: upperTick.toString(),
-        poolId: position.pool_id,
-      });
 
-      const [priceRange, rangeApr] = await Promise.all([
-        priceRangePromise,
-        rangeAprPromise,
-      ]);
+      // the APR range query involves a lot of calculation and can timeout the gateway
+      // instead, let's timeout the query and return undefined if it takes too long
+      const rangeApr = await timeout(
+        () =>
+          getConcentratedRangePoolApr({
+            lowerTick: lowerTick.toString(),
+            upperTick: upperTick.toString(),
+            poolId: position.pool_id,
+          })
+            .then((rate) => rate ?? new RatePretty(0))
+            .catch(() => new RatePretty(0)),
+        4_000, // 4 seconds
+        "getConcentratedRangePoolApr"
+      )().catch(() => new RatePretty(0));
 
       const pool = pools.find((pool) => pool.id === position.pool_id);
       if (!pool) {
@@ -333,7 +348,8 @@ export async function mapGetPositionDetails({
             lockId: rawDelegatedSuperfluidPosition.lock_id,
             equivalentStakedAmount: new CoinPretty(
               stakeCurrency,
-              rawDelegatedSuperfluidPosition.equivalent_staked_amount.amount
+              rawDelegatedSuperfluidPosition.equivalent_staked_amount?.amount ??
+                0
             ),
           }
         : undefined;
@@ -346,7 +362,8 @@ export async function mapGetPositionDetails({
             lockId: rawUndelegatingSuperfluidPosition.lock_id,
             equivalentStakedAmount: new CoinPretty(
               stakeCurrency,
-              rawUndelegatingSuperfluidPosition.equivalent_staked_amount.amount
+              rawUndelegatingSuperfluidPosition.equivalent_staked_amount
+                ?.amount ?? 0
             ),
             endTime: new Date(
               rawUndelegatingSuperfluidPosition.synthetic_lock.end_time
@@ -408,7 +425,7 @@ export async function mapGetPositionDetails({
           delegationLockId: delegatedSuperfluidPosition.lockId,
           equivalentStakedAmount:
             delegatedSuperfluidPosition.equivalentStakedAmount,
-          superfluidApr: superfluidApr!,
+          superfluidApr: superfluidApr ?? new RatePretty(0),
           humanizedStakeDuration: longestLockDuration.humanize(),
         };
       } else if (isSuperfluidUnstaking && undelegatingSuperfluidPosition) {
@@ -423,13 +440,13 @@ export async function mapGetPositionDetails({
           undelegationEndTime: undelegatingSuperfluidPosition.endTime,
           equivalentStakedAmount:
             undelegatingSuperfluidPosition.equivalentStakedAmount,
-          superfluidApr: superfluidApr!,
+          superfluidApr: superfluidApr ?? new RatePretty(0),
         };
       }
 
       const totalRangeApr =
         isSuperfluidStaked || isSuperfluidUnstaking
-          ? rangeApr?.add(superfluidApr ?? new Dec(0))
+          ? rangeApr.add(superfluidApr ?? new Dec(0))
           : rangeApr;
 
       return {
@@ -455,9 +472,11 @@ export async function mapGetPositionDetails({
   );
 }
 
-export type ClPosition = Awaited<ReturnType<typeof mapGetPositions>>[number];
+export type UserPosition = Awaited<
+  ReturnType<typeof mapGetUserPositions>
+>[number];
 
-export async function mapGetPositions({
+export async function mapGetUserPositions({
   positions: initialPositions,
   userOsmoAddress,
   forPoolId,
@@ -468,22 +487,13 @@ export async function mapGetPositions({
 }) {
   const positionsPromise = initialPositions
     ? Promise.resolve(initialPositions)
-    : queryCLPositions({ bech32Address: userOsmoAddress }).then(
+    : queryAccountPositions({ bech32Address: userOsmoAddress }).then(
         ({ positions }) => positions
       );
 
-  const stakeCurrencyPromise = getAsset({
-    anyDenom: ChainList[0].staking.staking_tokens[0].denom,
-  });
+  const positions = await positionsPromise;
 
-  const [positions, stakeCurrency] = await Promise.all([
-    positionsPromise,
-    stakeCurrencyPromise,
-  ]);
-
-  if (!stakeCurrency) throw new Error(`Stake currency (OSMO) not found`);
-
-  const eventualPositions = await Promise.all(
+  const userPositions = await Promise.all(
     positions
       .filter((position) => {
         if (Boolean(forPoolId) && position.position.pool_id !== forPoolId) {
@@ -505,18 +515,18 @@ export async function mapGetPositions({
         }
         const currentValue = new PricePretty(
           DEFAULT_VS_CURRENCY,
-          (await calcSumCoinsValue([baseCoin, quoteCoin])) ?? 0
+          await calcSumCoinsValue([baseCoin, quoteCoin])
         );
 
         const lowerTick = new Int(position.lower_tick);
         const upperTick = new Int(position.upper_tick);
         const priceRange = await Promise.all([
-          getClTickPrice({
+          getTickPrice({
             tick: lowerTick,
             baseCoin,
             quoteCoin,
           }),
-          getClTickPrice({
+          getTickPrice({
             tick: upperTick,
             baseCoin,
             quoteCoin,
@@ -529,6 +539,7 @@ export async function mapGetPositions({
         return {
           id: position.position_id,
           poolId: position.pool_id,
+          position: position_,
           currentCoins: [baseCoin, quoteCoin],
           currentValue,
           isFullRange,
@@ -539,7 +550,7 @@ export async function mapGetPositions({
       })
   );
 
-  return eventualPositions.filter((p): p is NonNullable<typeof p> => !!p);
+  return userPositions.filter((p): p is NonNullable<typeof p> => !!p);
 }
 
 export type PositionHistoricalPerformance = Awaited<
@@ -553,7 +564,7 @@ export async function getPositionHistoricalPerformance({
   positionId: string;
 }) {
   const [{ position }, performance] = await Promise.all([
-    queryCLPosition({ id: positionId }),
+    queryPositionById({ id: positionId }),
     queryPositionPerformance({
       positionId,
     }),
@@ -607,24 +618,28 @@ export async function getPositionHistoricalPerformance({
 
   const currentValue = new PricePretty(
     DEFAULT_VS_CURRENCY,
-    (await calcSumCoinsValue(currentCoins)) ?? 0
+    await calcSumCoinsValue(currentCoins).catch((e) =>
+      captureErrorAndReturn(e, new Dec(0))
+    )
   );
   const currentCoinsValues = (
-    await Promise.all(currentCoins.map(calcCoinValue))
-  )
-    .filter((p): p is NonNullable<typeof p> => !!p)
-    .map((p) => new PricePretty(DEFAULT_VS_CURRENCY, p));
+    await Promise.all(
+      currentCoins
+        .map(calcCoinValue)
+        .map((p) => p.catch((e) => captureErrorAndReturn(e, 0)))
+    )
+  ).map((p) => new PricePretty(DEFAULT_VS_CURRENCY, p));
   const principalValue = new PricePretty(
     DEFAULT_VS_CURRENCY,
-    (await calcSumCoinsValue(principalCoins)) ?? 0
+    await calcSumCoinsValue(principalCoins)
   );
   const claimableRewardsValue = new PricePretty(
     DEFAULT_VS_CURRENCY,
-    (await calcSumCoinsValue(claimableRewardCoins)) ?? 0
+    await calcSumCoinsValue(claimableRewardCoins)
   );
   const totalEarnedValue = new PricePretty(
     DEFAULT_VS_CURRENCY,
-    (await calcSumCoinsValue(totalRewardCoins)) ?? 0
+    await calcSumCoinsValue(totalRewardCoins)
   );
 
   const principalValueDec = principalValue.toDec();

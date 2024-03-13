@@ -5,44 +5,35 @@ import type { NextPage } from "next";
 import { NextSeo } from "next-seo";
 import { ComponentProps, useCallback, useMemo, useRef, useState } from "react";
 
-import { ShowMoreButton } from "~/components/buttons/show-more";
 import { PoolCard } from "~/components/cards";
-import { AllPoolsTable as AllPoolsTableV1 } from "~/components/complex/all-pools-table-v1";
-import { AllPoolsTable as AllPoolsTableV2 } from "~/components/complex/all-pools-table-v2";
+import { AllPoolsTable } from "~/components/complex/all-pools-table";
 import { MyPositionsSection } from "~/components/complex/my-positions-section";
-import { SuperchargePool } from "~/components/funnels/concentrated-liquidity/supercharge-pool";
-import { ConvertToStakeAd } from "~/components/funnels/convert-to-stake/convert-to-stake-ad";
 import SkeletonLoader from "~/components/loaders/skeleton-loader";
 import { PoolsOverview } from "~/components/overview/pools";
+import { ShowMoreButton } from "~/components/ui/button";
 import { EventName } from "~/config";
 import { useHideDustUserSetting, useTranslation } from "~/hooks";
 import {
   useAmplitudeAnalytics,
   useCreatePoolConfig,
   useDimension,
-  useDisclosure,
   useLockTokenConfig,
   useSuperfluidPool,
   useWindowSize,
 } from "~/hooks";
-import { useConvertToStakeConfig } from "~/hooks/ui-config/use-convert-to-stake-config";
 import { useFeatureFlags } from "~/hooks/use-feature-flags";
 import {
   AddLiquidityModal,
   CreatePoolModal,
   LockTokensModal,
-  RemoveLiquidityModal,
   SuperfluidValidatorModal,
 } from "~/modals";
-import { ConcentratedLiquidityLearnMoreModal } from "~/modals/concentrated-liquidity-intro";
-import { ConvertToStakeModal } from "~/modals/convert-to-stake";
-import { UserUpgradesModal } from "~/modals/user-upgrades";
 import { useStore } from "~/stores";
 import { formatPretty } from "~/utils/formatter";
 import { api } from "~/utils/trpc";
 
 const Pools: NextPage = observer(function () {
-  const { chainStore, accountStore, queriesStore, userUpgrades } = useStore();
+  const { chainStore, accountStore, queriesStore } = useStore();
   const { t } = useTranslation();
   useAmplitudeAnalytics({
     onLoadEvent: [EventName.Pools.pageViewed],
@@ -61,12 +52,6 @@ const Pools: NextPage = observer(function () {
   const [myPositionsRef, { height: myPositionsHeight }] =
     useDimension<HTMLDivElement>();
 
-  const [superchargeLiquidityRef, { height: superchargeLiquidityHeight }] =
-    useDimension<HTMLDivElement>();
-
-  const [convertToStakeRef, { height: convertToStakeHeight }] =
-    useDimension<HTMLDivElement>();
-
   const featureFlags = useFeatureFlags();
 
   // create pool dialog
@@ -83,9 +68,6 @@ const Pools: NextPage = observer(function () {
   const [addLiquidityModalPoolId, setAddLiquidityModalPoolId] = useState<
     string | null
   >(null);
-  const [removeLiquidityModalPoolId, setRemoveLiquidityModalPoolId] = useState<
-    string | null
-  >(null);
   const [lockLpTokenModalPoolId, setLockLpTokenModalPoolId] = useState<
     string | null
   >(null);
@@ -96,10 +78,6 @@ const Pools: NextPage = observer(function () {
   const quickActionProps = {
     quickAddLiquidity: useCallback(
       (poolId: string) => setAddLiquidityModalPoolId(poolId),
-      []
-    ),
-    quickRemoveLiquidity: useCallback(
-      (poolId: string) => setRemoveLiquidityModalPoolId(poolId),
       []
     ),
     quickLockTokens: useCallback(
@@ -226,24 +204,6 @@ const Pools: NextPage = observer(function () {
     }
   }, [createPoolConfig, account]);
 
-  // CL funnel
-  const [showConcentratedLiqIntro, setShowConcentratedLiqIntro] =
-    useState(false);
-  const {
-    isOpen: isUserUpgradesOpen,
-    onOpen: onOpenUserUpgrades,
-    onClose: onCloseUserUpgrades,
-  } = useDisclosure();
-  const { isMobile } = useWindowSize();
-
-  // convert to stake funnel
-  const convertToStakeConfig = useConvertToStakeConfig();
-  const {
-    isOpen: isConvertToStakeOpen,
-    onOpen: onOpenConvertToStake,
-    onClose: onCloseConvertToStake,
-  } = useDisclosure();
-
   return (
     <main className="m-auto max-w-container bg-osmoverse-900 px-8 md:px-3">
       <NextSeo
@@ -268,16 +228,6 @@ const Pools: NextPage = observer(function () {
           onRequestClose={() => setAddLiquidityModalPoolId(null)}
         />
       )}
-      {removeLiquidityModalPoolId && (
-        <RemoveLiquidityModal
-          title={t("removeLiquidity.titleInPool", {
-            poolId: removeLiquidityModalPoolId,
-          })}
-          poolId={removeLiquidityModalPoolId}
-          isOpen={true}
-          onRequestClose={() => setRemoveLiquidityModalPoolId(null)}
-        />
-      )}
       {lockLpTokenModalPoolId && (
         <LockTokensModal
           title={t("lockToken.titleInPool", { poolId: lockLpTokenModalPoolId })}
@@ -297,50 +247,6 @@ const Pools: NextPage = observer(function () {
           setIsCreatingPool={useCallback(() => setIsCreatingPool(true), [])}
         />
       </section>
-      {featureFlags.convertToStake &&
-        convertToStakeConfig.isConvertToStakeFeatureRelevantToUser && (
-          <section
-            ref={convertToStakeRef}
-            className="pt-8 pb-10 md:pt-4 md:pb-5"
-          >
-            <ConvertToStakeAd onClickCta={onOpenConvertToStake} />
-            <ConvertToStakeModal
-              isOpen={isConvertToStakeOpen}
-              onRequestClose={onCloseConvertToStake}
-            />
-          </section>
-        )}
-      {featureFlags.concentratedLiquidity &&
-        featureFlags.upgrades &&
-        userUpgrades.availableCfmmToClUpgrades.length > 0 &&
-        !isMobile && (
-          <section
-            ref={superchargeLiquidityRef}
-            className="pt-8 pb-10 md:pt-4 md:pb-5"
-          >
-            <SuperchargePool
-              title={t("addConcentratedLiquidityeEarnMore.title")}
-              caption={t("addConcentratedLiquidityeEarnMore.caption")}
-              primaryCta={t("addConcentratedLiquidityeEarnMore.primaryCta")}
-              secondaryCta={t("addConcentratedLiquidityeEarnMore.secondaryCta")}
-              onCtaClick={onOpenUserUpgrades}
-              onSecondaryClick={() => {
-                setShowConcentratedLiqIntro(true);
-              }}
-            />
-            {showConcentratedLiqIntro && (
-              <ConcentratedLiquidityLearnMoreModal
-                isOpen
-                onRequestClose={() => setShowConcentratedLiqIntro(false)}
-              />
-            )}
-            <UserUpgradesModal
-              isOpen={isUserUpgradesOpen}
-              onRequestClose={onCloseUserUpgrades}
-            />
-          </section>
-        )}
-
       {featureFlags.concentratedLiquidity && account?.address && (
         <section ref={myPositionsRef}>
           <div className="flex w-full flex-col flex-nowrap gap-5 pb-[3.75rem]">
@@ -355,29 +261,10 @@ const Pools: NextPage = observer(function () {
       </section>
 
       <section>
-        {featureFlags.newPoolsTable ? (
-          <AllPoolsTableV2
-            topOffset={
-              myPositionsHeight +
-              myPoolsHeight +
-              poolsOverviewHeight +
-              superchargeLiquidityHeight +
-              convertToStakeHeight
-            }
-            {...quickActionProps}
-          />
-        ) : featureFlags._isInitialized ? (
-          <AllPoolsTableV1
-            topOffset={
-              myPositionsHeight +
-              myPoolsHeight +
-              poolsOverviewHeight +
-              superchargeLiquidityHeight +
-              convertToStakeHeight
-            }
-            {...quickActionProps}
-          />
-        ) : null}
+        <AllPoolsTable
+          topOffset={myPositionsHeight + myPoolsHeight + poolsOverviewHeight}
+          {...quickActionProps}
+        />
       </section>
     </main>
   );
@@ -403,6 +290,13 @@ export const MyPoolsSection = observer(() => {
       },
       {
         enabled: Boolean(account?.address),
+
+        // expensive query
+        trpc: {
+          context: {
+            skipBatch: true,
+          },
+        },
       }
     );
 
@@ -453,7 +347,6 @@ export const MyPoolsSection = observer(() => {
                   userValue,
                   reserveCoins,
                   isSuperfluid,
-                  weightedPoolInfo,
                 }) => {
                   const poolLiqudity_ = formatPretty(poolLiquidity);
 
@@ -506,9 +399,6 @@ export const MyPoolsSection = observer(() => {
                             poolId: id,
                             poolName: reserveCoins
                               .map((coin) => coin.currency.coinDenom)
-                              .join(" / "),
-                            poolWeight: weightedPoolInfo?.weights
-                              .map(({ weight }) => weight.toString())
                               .join(" / "),
                             isSuperfluidPool: isSuperfluid,
                           },

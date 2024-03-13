@@ -9,23 +9,21 @@ export type AvailableFlags =
   | "staking"
   | "swapsAdBanner"
   | "notifications"
-  | "convertToStake"
   | "mobileNotifications"
-  | "upgrades"
   | "tokenInfo"
   | "newAssetsTable"
   | "sidebarOsmoChangeAndChart"
   | "multiBridgeProviders"
-  | "unlistedAssets"
   | "earnPage"
   | "sidecarRouter"
   | "legacyRouter"
   | "tfmRouter"
   | "osmosisUpdatesPopUp"
   | "aprBreakdown"
-  | "newPoolsTable"
   | "topAnnouncementBanner"
-  | "tfmProTradingNavbarButton";
+  | "tfmProTradingNavbarButton"
+  | "positionRoi"
+  | "swapToolSimulateFee";
 
 type ModifiedFlags =
   | Exclude<AvailableFlags, "mobileNotifications">
@@ -37,22 +35,20 @@ const defaultFlags: Record<ModifiedFlags, boolean> = {
   staking: true,
   swapsAdBanner: true,
   notifications: true,
-  convertToStake: true,
-  upgrades: true,
   tokenInfo: true,
   newAssetsTable: false,
   sidebarOsmoChangeAndChart: true,
   multiBridgeProviders: true,
-  unlistedAssets: false,
   earnPage: false,
   sidecarRouter: true,
   legacyRouter: true,
   tfmRouter: true,
   osmosisUpdatesPopUp: false,
   aprBreakdown: true,
-  newPoolsTable: true,
   topAnnouncementBanner: true,
   tfmProTradingNavbarButton: true,
+  positionRoi: true,
+  swapToolSimulateFee: false,
   _isInitialized: false,
   _isClientIDPresent: false,
 };

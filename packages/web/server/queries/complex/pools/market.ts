@@ -2,7 +2,7 @@ import { PricePretty, RatePretty } from "@keplr-wallet/unit";
 import cachified, { CacheEntry } from "cachified";
 import { LRUCache } from "lru-cache";
 
-import { DEFAULT_LRU_OPTIONS } from "~/config/cache";
+import { DEFAULT_LRU_OPTIONS } from "~/utils/cache";
 
 import { queryPoolsFees } from "../../imperator";
 import { DEFAULT_VS_CURRENCY } from "../assets/config";
@@ -23,7 +23,7 @@ export function getCachedPoolMarketMetricsMap(): Promise<
   return cachified({
     cache: metricPoolsCache,
     key: "pools-metrics-map",
-    ttl: 1000 * 60 * 5, // 5 minutes
+    ttl: 1000 * 60 * 5, // 5 mins
     getFreshValue: async () => {
       const map = new Map<string, PoolMarketMetrics>();
 

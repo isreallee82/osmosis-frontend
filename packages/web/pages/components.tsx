@@ -27,13 +27,11 @@ import { CloseButton } from "~/components/buttons/close-button";
 import IconButton from "~/components/buttons/icon-button";
 import LinkButton from "~/components/buttons/link-button";
 import LinkIconButton from "~/components/buttons/link-icon-button";
-import { ShowMoreButton } from "~/components/buttons/show-more";
 import { SwitchWalletButton } from "~/components/buttons/switch-wallet";
 import {
   CheckboxSelect,
   MenuDropdown,
   Radio,
-  Slider,
   StakeTab,
 } from "~/components/control";
 import { FilterProvider } from "~/components/earn/filters/filter-context";
@@ -45,6 +43,7 @@ import Spinner from "~/components/loaders/spinner";
 import { RadioWithOptions } from "~/components/radio-with-options";
 import { Step, Stepper } from "~/components/stepper";
 import { Tooltip } from "~/components/tooltip";
+import { ShowMoreButton } from "~/components/ui/button";
 import { Button as ButtonShadcn } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input as InputShadcn } from "~/components/ui/input";
@@ -103,13 +102,14 @@ const Loaders = () => {
   );
 };
 
-const SlidersShadcn = () => {
+const Sliders = () => {
   const [slider, setSlider] = useState([50]);
 
   return (
     <Card title="Slider (Shadcn)">
-      <Component title="Slider">
+      <Component title="Slider Default">
         <SliderShadcn
+          variant="default"
           min={0}
           max={100}
           step={1}
@@ -117,47 +117,14 @@ const SlidersShadcn = () => {
           onValueChange={(value) => setSlider(value)}
         />
       </Component>
-    </Card>
-  );
-};
-
-const Sliders = () => {
-  const [slider, setSlider] = useState(0);
-
-  return (
-    <Card title="Slider">
-      <Component title="Slider">
-        <Slider
-          className="my-8 w-full"
-          currentValue={slider}
-          onInput={(value) => {
-            setSlider(value);
-          }}
+      <Component title="Slider Supercharged">
+        <SliderShadcn
+          variant="secondary"
           min={0}
           max={100}
           step={1}
-        />
-      </Component>
-      <Component title="Disabled">
-        <Slider
-          disabled
-          className="my-8 w-full"
-          currentValue={slider}
-          onInput={(value) => setSlider(value)}
-          min={0}
-          max={100}
-          step={1}
-        />
-      </Component>
-      <Component title="Supercharged Gradient">
-        <Slider
-          className="my-8 w-full"
-          currentValue={slider}
-          onInput={(value) => setSlider(value)}
-          min={0}
-          max={100}
-          step={1}
-          useSuperchargedGradient
+          value={slider}
+          onValueChange={(value) => setSlider(value)}
         />
       </Component>
     </Card>
@@ -1220,7 +1187,6 @@ const Components: NextPage = () => {
       <InputsShadcn />
       <Inputs />
 
-      <SlidersShadcn />
       <Sliders />
 
       <FontSize />

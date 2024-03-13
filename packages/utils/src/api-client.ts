@@ -108,6 +108,8 @@ export async function apiClient<T>(
         endpoint,
         config,
         data,
+        status: response.status,
+        exception: e,
       });
 
       if (e instanceof ApiClientError) {
