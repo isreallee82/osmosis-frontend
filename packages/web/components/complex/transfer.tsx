@@ -1,5 +1,6 @@
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import { CoinPretty, PricePretty, RatePretty } from "@keplr-wallet/unit";
+import { formatICNSName } from "@osmosis-labs/utils";
 import classNames from "classnames";
 import { observer } from "mobx-react-lite";
 import Image from "next/image";
@@ -10,7 +11,6 @@ import { useClickAway } from "react-use";
 
 import { Icon } from "~/components/assets";
 import { GradientView } from "~/components/assets/gradient-view";
-import { Button } from "~/components/buttons";
 import IconButton from "~/components/buttons/icon-button";
 import { SwitchWalletButton } from "~/components/buttons/switch-wallet";
 import { BridgeFromToNetwork } from "~/components/complex/bridge-from-to-network";
@@ -19,13 +19,13 @@ import { InputBox } from "~/components/input";
 import SkeletonLoader from "~/components/loaders/skeleton-loader";
 import { Tooltip } from "~/components/tooltip";
 import { Disableable, InputProps } from "~/components/types";
+import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { useTranslation } from "~/hooks";
 import { useWindowSize } from "~/hooks";
 import { truncateEthAddress } from "~/integrations/ethereum/metamask-utils";
 import { WalletDisplay } from "~/integrations/wallets";
 import { useStore } from "~/stores";
-import { formatICNSName } from "~/utils/string";
 
 type PathSource = "counterpartyAccount" | "account";
 
@@ -268,7 +268,6 @@ export const Transfer = observer(
             onSelectBridgeProvider={onSelectBridgeProvider}
             selectedBridgeProvidersId={selectedBridgeProvidersId}
           />
-
           <div className="z-10 flex w-full gap-4 pr-7 pl-6 text-center md:pr-9 sm:pr-0 sm:pl-0">
             {/* From Address */}
             <div
@@ -385,7 +384,7 @@ export const Transfer = observer(
                     <>
                       {isAddButtonVisible && (
                         <Button
-                          mode="amount"
+                          size="sm"
                           onClick={() => {
                             setIsAddingWithdrawAddr(true);
                             addWithdrawAddrConfig.setCustomAddress(to.address);
@@ -405,7 +404,7 @@ export const Transfer = observer(
                       ) : undefined}
                       {isEditButtonVisible && (
                         <Button
-                          mode="amount"
+                          size="sm"
                           onClick={() => {
                             setIsEditingWithdrawAddr(true);
                             editWithdrawAddrConfig.setCustomAddress(to.address);

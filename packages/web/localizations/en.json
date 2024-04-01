@@ -176,6 +176,7 @@
       "titleWithdraw": "Withdraw to"
     },
     "stakedAssets": "Staked OSMO",
+    "pooledAssets": "Pooled",
     "table": {
       "columns": {
         "assetChain": "Asset / Chain",
@@ -203,6 +204,7 @@
       "activate": "Activate"
     },
     "totalAssets": "Total assets",
+    "totalBalance": "Total balance",
     "transfer": {
       "availableMobile": "Available",
       "availableOn": "Available on {network}",
@@ -272,6 +274,18 @@
       "activate": "Activate unverified assets",
       "description": "is an unverified token. Do you wish to activate it? Be sure to research thoroughly before trading.",
       "reminder": "You can always deactivate this setting in the settings modal."
+    },
+    "getStarted": {
+      "title": "Get started with {osmosis}",
+      "description": "Connect and fund your wallet to start trading in just a few steps.",
+      "addFunds": "Add funds to get started"
+    },
+    "categories": {
+      "new": "Newest",
+      "defi": "DeFi",
+      "stablecoin": "Stablecoins",
+      "meme": "Meme",
+      "liquid_staking": "Liquid staking"
     }
   },
   "buyTokens": "Buy tokens",
@@ -350,7 +364,8 @@
     "sequenceNumber": "You have too many concurrent transactions! Try resending after your prior tx lands on chain. (Sequence: {sequence})",
     "swapSlippage": "Swap for {coinDenom} failed due to slippage. Try increasing the slippage tolerance.",
     "invalidAmounts": "Invalid amount(s)",
-    "txTimedOutError": "Transaction timed out. Please retry."
+    "txTimedOutError": "Transaction timed out. Please retry.",
+    "insufficientFee": "Insufficient balance for transaction fees. Please add funds to continue."
   },
   "frontierMigration": {
     "introducingUnverifiedAssets": "Introducing Unverified Assets",
@@ -550,8 +565,7 @@
   },
   "removeLiquidity": {
     "sharesAmount": "{shares} shares",
-    "title": "Remove Liquidity",
-    "titleInPool": "Remove liquidity from pool #{poolId}"
+    "title": "Remove Liquidity"
   },
   "requestRejected": "Request rejected",
   "settings": {
@@ -597,7 +611,6 @@
     "unbondingPeriodTooltip": "Locked tokens increase stability for the blockchain. When you unstake your tokens, they will be available after the specified unbonding period.",
     "estimatedEarningsTooltip": "These earning are calculated based on the current staking APR, which is subject to change.",
     "collectRewardsTooltipDisabled": "Your rewards are too low to collect, please try again once your unclaimed balance has reached the minimum threshold of {collectRewardsMinimumOsmo} OSMO.",
-    "isAPRTooHighTooltip": "This validator takes an unusually high commission. Consider selecting a different validator.",
     "isVotingPowerTooHighTooltip": "This is a top 10 validator with high voting power. Consider selecting a different validator to help promote decentralization.",
     "learnMore": {
       "step1": {
@@ -648,20 +661,6 @@
         "buttonKeep": "Keep Existing Validators",
         "buttonSelect": "Select New Validators"
       }
-    },
-    "introModal": {
-      "callout": "New feature",
-      "title": "Staking on Osmosis",
-      "description": {
-        "1": "Staking is one of the easiest ways to earn with your assets. Now you can stake your OSMO right on Osmosis.",
-        "2": "earn up to",
-        "3": "yearly in staking rewards!",
-        "4": "and put it to work",
-        "5": "Put your available {displayBalance} to work and",
-        "button": "Buy some OSMO"
-      },
-      "asterisk": "* Staking reward value subject to price and APR volatility.",
-      "button": "Start staking"
     }
   },
   "superfluidValidator": {
@@ -690,6 +689,8 @@
     "buttonError": "Swap anyway",
     "expectedOutput": "Expected Output",
     "fee": "Swap Fee ({fee})",
+    "networkFee": "Network Fee",
+    "totalFee": "Total Fee",
     "HALF": "HALF",
     "MAX": "MAX",
     "minimumSlippage": "Minimum received after slippage ({slippage})",
@@ -706,7 +707,8 @@
     "promo": {
       "newOpportunity": "New opportunity to earn with {denom}",
       "discoverSuperchargedPools": "Discover Supercharged Pools"
-    }
+    },
+    "dynamicSpreadFactor": "Dynamic"
   },
   "walletSelect": {
     "connectionInProgress": "Wallet connection is already in progress. Please open your extension to check the status.",
@@ -752,7 +754,6 @@
   "unknownError": "Unknown error",
   "viewExplorer": "View explorer",
   "waitingForTransaction": "Waiting for transaction to be included in the block",
-  "highPoolInflationWarning": "High APRs may result from inflationary rewards. Proceed with caution.",
   "seo": {
     "404": {
       "title": "404 - Page not found",
@@ -829,6 +830,7 @@
     "allocation": "Allocation",
     "tokensCount": "{number} tokens",
     "strategiesCount": "{number} strategies",
+    "oneStrategy": "1 strategy",
     "value": "Value",
     "method": "Method",
     "platform": "Platform",
@@ -843,11 +845,10 @@
     "days": "days",
     "risk": "Risk",
     "strategyMethod": "Strategy Method",
-    "allMethods": "All Method",
+    "allMethods": "All Methods",
     "platforms": "Platforms",
     "allPlatforms": "All Platforms",
-    "lockingDuration": "Locking Duration",
-    "specialTokens": "Special Tokens",
+    "allCategories": "All Categories",
     "filters": "Filters",
     "resetFilters": "Reset Filters",
     "saveFilters": "Save Filters",
@@ -865,8 +866,26 @@
       "single": "Single",
       "multi": "Multi"
     },
-    "totalValueInvested": "Total Value Invested",
-    "lookBelow": "Look below and find best strategies for you"
+    "totalValueInvested": "Total Value",
+    "lookBelow": "Look below and find best strategies for you",
+    "startEarning": "Discover strategies",
+    "startEarningDescription": "Unlock your full earning potential. Put your assets to work through one of the many strategies below.",
+    "loadingStrategies": "Loading strategies...",
+    "sorryErrorOccurred": "Sorry, an error occured.",
+    "sorryNoResults": "No strategies found.",
+    "tryChangingFilters": "Try changing filters",
+    "retry": "Retry",
+    "manage": "Manage",
+    "noLock": "No Lock",
+    "riskDisclaimer": "Risk is calculated with a combined set of criteria about a strategy and its underlying assets.",
+    "strategyGeoblocked": "Sorry, this strategy is unavailable in your country."
   },
-  "disclaimer": "Disclaimer"
+  "disclaimer": "Disclaimer",
+  "unstableAssetsWarning": {
+    "titleDeposit": "{coinDenom} deposits unstable",
+    "titleWithdraw": "{coinDenom} withdrawals unstable",
+    "description": "Due to uncertain technical issues, transfers between Osmosis and {prettyChainName} may experience significant delays or transaction failure. Proceed at your own risk.",
+    "buttonContinue": "Continue Anyway",
+    "buttonCancel": "Cancel"
+  }
 }

@@ -1,4 +1,6 @@
 import { Popover } from "@headlessui/react";
+import { runIfFn } from "@osmosis-labs/utils";
+import { isFunction } from "@osmosis-labs/utils";
 import classNames from "classnames";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,8 +11,10 @@ import { Pill } from "~/components/indicators/pill";
 import { MainLayoutMenu } from "~/components/types";
 import { useTranslation, useWindowSize } from "~/hooks";
 import { useAmplitudeAnalytics } from "~/hooks";
-import { isFunction } from "~/utils/assertion";
-import { MaybeRenderProp, runIfFn } from "~/utils/function";
+
+export type MaybeRenderProp<P> =
+  | React.ReactNode
+  | ((props: P) => React.ReactNode);
 
 export const MainMenu: FunctionComponent<{
   onClickItem?: () => void;
@@ -110,7 +114,7 @@ const MenuLink: FunctionComponent<{
       })}
     >
       <div
-        className={showMore ? undefined : "flex h-12 items-center px-4 py-3"}
+        className={showMore ? undefined : "flex h-12 items-center px-3 py-3"}
         onMouseEnter={() => shouldShowHover && setShowSubTitle(true)}
         onMouseLeave={() => shouldShowHover && setShowSubTitle(false)}
         onClick={onClickLink}
@@ -137,7 +141,7 @@ const MorePopover: FunctionComponent<{
           >
             <MenuItemContent menu={item} selected={open} />
           </Popover.Button>
-          <Popover.Panel className="top-navbar-mobile absolute bottom-[3.5rem] flex w-60 flex-col gap-2 rounded-3xl bg-osmoverse-800 py-4 px-3">
+          <Popover.Panel className="top-navbar-mobile absolute bottom-[3.5rem] flex w-full flex-col gap-2 rounded-3xl bg-osmoverse-800 py-2 px-2">
             {secondaryMenus.map((menu: MainLayoutMenu) => {
               const { link, selectionTest, secondaryLogo, showMore } = menu;
               return (

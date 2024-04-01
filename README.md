@@ -32,7 +32,7 @@ yarn start
 
 We welcome and encourage contributions! We recommend looking for [issues labeled with "good-first-issue"](https://github.com/osmosis-labs/osmosis-frontend/contribute).
 
-Make sure [node](https://nodejs.org/en/) >= 16 and [yarn](https://yarnpkg.com/getting-started/install) is installed.
+Make sure [node](https://nodejs.org/en/) = 20 and [yarn](https://yarnpkg.com/getting-started/install) is installed.
 
 1. Install deps
 
@@ -115,12 +115,12 @@ To add translations, you can manually edit the JSON translation files in `packag
 
 Please see the asset [listing requirements](https://github.com/osmosis-labs/assetlists/blob/main/LISTING.md) to display assets on Osmosis Zone web app.
 
-### Showing Unlisted Assets
+### Showing Preview Assets
 
-To view unlisted assets for testing, append the following query parameter to the Osmosis URL:
+To view preview assets for testing, append the following query parameter to the Osmosis URL:
 
 ```
-?show_unlisted_assets=true
+?show_preview_assets=true
 ```
 
-They'll be enabled for the tab's session. If you'd like to disable it, either open a new tab without the query parameter or append `?show_unlisted_assets=false`.
+They'll be enabled for the tab's session. If you'd like to disable it, either open a new tab without the query parameter or append `?show_preview_assets=false`.

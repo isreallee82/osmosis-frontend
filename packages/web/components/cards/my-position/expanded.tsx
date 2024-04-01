@@ -1,4 +1,9 @@
 import { CoinPretty, Dec, PricePretty } from "@keplr-wallet/unit";
+import type {
+  PositionHistoricalPerformance,
+  UserPosition,
+  UserPositionDetails,
+} from "@osmosis-labs/server";
 import classNames from "classnames";
 import moment from "dayjs";
 import { observer } from "mobx-react-lite";
@@ -15,10 +20,14 @@ import React, {
 } from "react";
 
 import { FallbackImg } from "~/components/assets";
-import { ArrowButton, Button } from "~/components/buttons";
-import { ChartButton } from "~/components/buttons";
-import { PriceChartHeader } from "~/components/chart/token-pair-historical";
+import {
+  ChartUnavailable,
+  PriceChartHeader,
+} from "~/components/chart/token-pair-historical";
+import { Spinner } from "~/components/loaders";
 import { CustomClasses } from "~/components/types";
+import { ChartButton } from "~/components/ui/button";
+import { ArrowButton, Button } from "~/components/ui/button";
 import { EventName } from "~/config";
 import { useTranslation } from "~/hooks";
 import { useAmplitudeAnalytics } from "~/hooks";
@@ -30,11 +39,6 @@ import { useConst } from "~/hooks/use-const";
 import { SuperfluidValidatorModal } from "~/modals";
 import { IncreaseConcentratedLiquidityModal } from "~/modals/increase-concentrated-liquidity";
 import { RemoveConcentratedLiquidityModal } from "~/modals/remove-concentrated-liquidity";
-import type {
-  ClPositionDetails,
-  PositionHistoricalPerformance,
-  UserPosition,
-} from "~/server/queries/complex/concentrated-liquidity";
 import { useStore } from "~/stores";
 import { formatPretty } from "~/utils/formatter";
 import { RouterOutputs } from "~/utils/trpc";
@@ -51,7 +55,7 @@ const TokenPairHistoricalChart = dynamic(
 export const MyPositionCardExpandedSection: FunctionComponent<{
   poolId: string;
   position: UserPosition;
-  positionDetails: ClPositionDetails | undefined;
+  positionDetails: UserPositionDetails | undefined;
   positionPerformance: PositionHistoricalPerformance | undefined;
   showLinkToPool?: boolean;
 }> = observer(
@@ -150,8 +154,16 @@ export const MyPositionCardExpandedSection: FunctionComponent<{
       <div className="flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex w-full gap-1 xl:hidden">
           <div className="flex h-[20.1875rem] flex-grow flex-col gap-[20px] rounded-l-2xl bg-osmoverse-700 py-7 pl-6">
-            <ChartHeader config={chartConfig} />
-            <Chart config={chartConfig} position={position} />
+            {chartConfig.isHistoricalDataLoading ? (
+              <Spinner className="m-auto" />
+            ) : !chartConfig.historicalChartUnavailable ? (
+              <>
+                <ChartHeader config={chartConfig} />
+                <Chart config={chartConfig} position={position} />
+              </>
+            ) : (
+              <ChartUnavailable />
+            )}
           </div>
           <div className="flex h-[20.1875rem] w-80 rounded-r-2xl bg-osmoverse-700">
             <div className="mt-[84px] flex flex-1 flex-col">
@@ -351,7 +363,7 @@ export const MyPositionCardExpandedSection: FunctionComponent<{
                     [
                       {
                         lockId: superfluidData.delegationLockId,
-                        isSyntheticLock: true,
+                        isSynthetic: true,
                       },
                     ]
                   )
@@ -404,13 +416,7 @@ const PositionButton: FunctionComponent<ComponentProps<typeof Button>> = (
   props
 ) => {
   return (
-    <Button
-      mode="unstyled"
-      size="sm"
-      className="text-white w-fit whitespace-nowrap rounded-lg border-2 border-wosmongton-400 bg-transparent py-4 px-5 text-subtitle1 font-subtitle1 hover:border-wosmongton-300 disabled:border-osmoverse-600 disabled:text-osmoverse-400 md:ml-auto"
-      onClick={props.onClick}
-      {...props}
-    >
+    <Button size="md" variant="outline" onClick={props.onClick} {...props}>
       {props.children}
     </Button>
   );
@@ -548,7 +554,7 @@ const Chart: FunctionComponent<{
 });
 
 const SuperfluidPositionInfo: FunctionComponent<
-  RouterOutputs["edge"]["concentratedLiquidity"]["getPositionDetails"]["superfluidData"]
+  RouterOutputs["local"]["concentratedLiquidity"]["getPositionDetails"]["superfluidData"]
 > = (props) => {
   const {
     validatorName,

@@ -1,14 +1,15 @@
 import { Dec } from "@keplr-wallet/unit";
+import type { UserPosition, UserPositionDetails } from "@osmosis-labs/server";
 import { observer } from "mobx-react-lite";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import React, { FunctionComponent, useCallback, useEffect } from "react";
 
-import { ChartButton } from "~/components/buttons";
 import { MyPositionStatus } from "~/components/cards/my-position/status";
 import { PriceChartHeader } from "~/components/chart/token-pair-historical";
 import { DepositAmountGroup } from "~/components/cl-deposit-input-group";
 import { tError } from "~/components/localization";
+import { ChartButton } from "~/components/ui/button";
 import {
   ObservableAddConcentratedLiquidityConfig,
   useAddConcentratedLiquidityConfig,
@@ -20,10 +21,6 @@ import {
   useHistoricalAndLiquidityData,
 } from "~/hooks/ui-config/use-historical-and-depth-data";
 import { ModalBase, ModalBaseProps } from "~/modals/base";
-import type {
-  ClPositionDetails,
-  UserPosition,
-} from "~/server/queries/complex/concentrated-liquidity";
 import { useStore } from "~/stores";
 import { formatPretty } from "~/utils/formatter";
 
@@ -40,7 +37,7 @@ export const IncreaseConcentratedLiquidityModal: FunctionComponent<
   {
     poolId: string;
     position: UserPosition;
-    status: ClPositionDetails["status"];
+    status: UserPositionDetails["status"];
   } & ModalBaseProps
 > = observer((props) => {
   const { poolId, position, status } = props;

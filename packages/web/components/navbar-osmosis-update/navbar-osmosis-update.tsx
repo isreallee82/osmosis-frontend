@@ -1,16 +1,16 @@
+import { queryOsmosisCMS } from "@osmosis-labs/server";
 import { useQuery } from "@tanstack/react-query";
 import classNames from "classnames";
 import React, { FunctionComponent } from "react";
 
 import { Icon } from "~/components/assets";
-import { ArrowButton } from "~/components/buttons";
 import IconButton from "~/components/buttons/icon-button";
 import Spinner from "~/components/loaders/spinner";
+import { ArrowButton } from "~/components/ui/button";
 import { useFeatureFlags, useTranslation } from "~/hooks";
 import { useDisclosure } from "~/hooks/use-disclosure";
 import { useLocalStorageState } from "~/hooks/window/use-localstorage-state";
 import { ModalBase } from "~/modals/base";
-import { queryOsmosisCMS } from "~/server/queries/osmosis/cms/query-osmosis-cms";
 
 const NavbarOsmosisUpdates = () => {
   const { t } = useTranslation();

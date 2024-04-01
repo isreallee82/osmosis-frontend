@@ -176,6 +176,7 @@
       "titleWithdraw": "Retirer à"
     },
     "stakedAssets": "OSMO cautionné",
+    "pooledAssets": "Regroupé",
     "table": {
       "columns": {
         "assetChain": "Actif / Chaine",
@@ -203,6 +204,7 @@
       "activate": "Activer"
     },
     "totalAssets": "Total des actifs",
+    "totalBalance": "Solde total",
     "transfer": {
       "availableMobile": "Disponible",
       "availableOn": "Disponible sur {network}",
@@ -272,6 +274,18 @@
       "activate": "Activer les actifs non vérifiés",
       "description": "est un jeton non vérifié. Souhaitez-vous l'activer ? Assurez-vous de faire des recherches approfondies avant de négocier.",
       "reminder": "Vous pouvez toujours désactiver ce paramètre dans la modale des paramètres."
+    },
+    "getStarted": {
+      "title": "Commencez avec {osmosis}",
+      "description": "Connectez-vous et approvisionnez votre portefeuille pour commencer à trader en quelques étapes seulement.",
+      "addFunds": "Ajoutez des fonds pour commencer"
+    },
+    "categories": {
+      "new": "Le plus récent",
+      "defi": "DéFi",
+      "stablecoin": "Pièces stables",
+      "meme": "Mème",
+      "liquid_staking": "Jalonnement liquide"
     }
   },
   "buyTokens": "Acheter jetons",
@@ -350,7 +364,8 @@
     "sequenceNumber": "Vous avez trop de transactions simultanées ! Essayez de renvoyer après que votre émission précédente ait atterri sur la chaîne. (Séquence : {sequence} )",
     "swapSlippage": "L'échange contre {coinDenom} a échoué en raison d'un glissement. Essayez d'augmenter la tolérance au glissement.",
     "invalidAmounts": "Montant(s) invalide(s)",
-    "txTimedOutError": "La transaction a expiré. Veuillez réessayer."
+    "txTimedOutError": "La transaction a expiré. Veuillez réessayer.",
+    "insufficientFee": "Solde insuffisant pour les frais de transaction. Veuillez ajouter des fonds pour continuer."
   },
   "frontierMigration": {
     "introducingUnverifiedAssets": "Introduction des actifs non vérifiés",
@@ -550,8 +565,7 @@
   },
   "removeLiquidity": {
     "sharesAmount": "{shares} actifs",
-    "title": "Retirer de la liquidité",
-    "titleInPool": "Retirer des liquidités du pool {poolId}"
+    "title": "Retirer de la liquidité"
   },
   "requestRejected": "Demande rejetée",
   "settings": {
@@ -597,7 +611,6 @@
     "unbondingPeriodTooltip": "Les jetons verrouillés augmentent la stabilité de la blockchain. Lorsque vous retirez vos jetons, ils seront disponibles après la période de déliaison spécifiée.",
     "estimatedEarningsTooltip": "Ces gains sont calculés sur la base du TAEG de mise actuel, qui est susceptible de changer.",
     "collectRewardsTooltipDisabled": "Vos récompenses sont trop faibles pour ête collectées, veuillez réessayer une fois que votre solde non réclamé a atteint le seuil minimum de 0,1 OSMO.",
-    "isAPRTooHighTooltip": "Ce validateur prend une commission inhabituellement élevée. Pensez à sélectionner un autre validateur.",
     "isVotingPowerTooHighTooltip": "Il s'agit d'un top 10 des validateurs avec un pouvoir de vote élevé. Envisagez de sélectionner un autre validateur pour aider à promouvoir la décentralisation.",
     "learnMore": {
       "step1": {
@@ -648,20 +661,6 @@
         "buttonKeep": "Conserver les validateurs existants",
         "buttonSelect": "Sélectionner de nouveaux validateurs"
       }
-    },
-    "introModal": {
-      "callout": "Nouvelle fonctionnalité",
-      "title": "Miser sur l’osmose",
-      "description": {
-        "1": "Le jalonnement est l’un des moyens les plus simples de gagner de l’argent avec vos actifs. Vous pouvez désormais miser votre OSMO directement sur Osmosis.",
-        "2": "gagner jusqu'à",
-        "3": "chaque année en récompenses de mise !",
-        "4": "et mettez-le au travail",
-        "5": "Mettez votre {displayBalance} à profit et",
-        "button": "Achetez de l'OSMO"
-      },
-      "asterisk": "* Valeur de récompense de mise sous réserve de la volatilité des prix et du TAEG.",
-      "button": "Commencer à jalonner"
     }
   },
   "superfluidValidator": {
@@ -690,6 +689,8 @@
     "buttonError": "Échanger quand même",
     "expectedOutput": "Résultat attendu",
     "fee": "Frais d'échange ({fee})",
+    "networkFee": "Frais de réseau",
+    "totalFee": "Montant total",
     "HALF": "MOITIÉ",
     "MAX": "MAX",
     "minimumSlippage": "Minimum reçu après glissement ({slippage})",
@@ -706,7 +707,8 @@
     "promo": {
       "newOpportunity": "Nouvelle opportunité de gagner avec",
       "discoverSuperchargedPools": "Découvrez les piscines suralimentées"
-    }
+    },
+    "dynamicSpreadFactor": "Dynamique"
   },
   "walletSelect": {
     "connectionInProgress": "La connexion du portefeuille est déjà en cours. Veuillez ouvrir votre extension pour vérifier le statut.",
@@ -752,7 +754,6 @@
   "unknownError": "Erreur inconnue",
   "viewExplorer": "Voir dans l'exploreur",
   "waitingForTransaction": "Attente de l'inclusion de la transaction dans le bloc",
-  "highPoolInflationWarning": "Des APR élevés peuvent être le résultat de récompenses inflationnistes. Procédez avec prudence.",
   "seo": {
     "404": {
       "title": "404 Page non trouvée",
@@ -829,6 +830,7 @@
     "allocation": "Allocation",
     "tokensCount": "{number} jetons",
     "strategiesCount": "Stratégies {number}",
+    "oneStrategy": "1 stratégie",
     "value": "Valeur",
     "method": "Méthode",
     "platform": "Plate-forme",
@@ -846,8 +848,7 @@
     "allMethods": "Toutes les méthodes",
     "platforms": "Plateformes",
     "allPlatforms": "Toutes les plateformes",
-    "lockingDuration": "Durée de verrouillage",
-    "specialTokens": "Jetons spéciaux",
+    "allCategories": "toutes catégories",
     "filters": "Filtres",
     "resetFilters": "Réinitialiser les filtres",
     "saveFilters": "Enregistrer les filtres",
@@ -865,8 +866,26 @@
       "single": "Célibataire",
       "multi": "Multi"
     },
-    "totalValueInvested": "Valeur totale investie",
-    "lookBelow": "Regardez ci-dessous et trouvez les meilleures stratégies pour vous"
+    "totalValueInvested": "Valeur totale",
+    "lookBelow": "Regardez ci-dessous et trouvez les meilleures stratégies pour vous",
+    "startEarning": "Découvrez les stratégies",
+    "startEarningDescription": "Libérez tout votre potentiel de revenus. Mettez vos atouts à profit grâce à l’une des nombreuses stratégies ci-dessous.",
+    "loadingStrategies": "Chargement des stratégies...",
+    "sorryErrorOccurred": "Désolé, une erreur s'est produite.",
+    "sorryNoResults": "Aucune stratégie trouvée.",
+    "tryChangingFilters": "Essayez de changer les filtres",
+    "retry": "Recommencez",
+    "manage": "Gérer",
+    "noLock": "Aucun verrou",
+    "riskDisclaimer": "Le risque est calculé avec un ensemble combiné de critères concernant une stratégie et ses actifs sous-jacents.",
+    "strategyGeoblocked": "Désolé, cette stratégie n'est pas disponible dans votre pays."
   },
-  "disclaimer": "Clause de non-responsabilité"
+  "disclaimer": "Clause de non-responsabilité",
+  "unstableAssetsWarning": {
+    "titleDeposit": "{coinDenom} dépôts instables",
+    "titleWithdraw": "{coinDenom} retraits instables",
+    "description": "En raison de problèmes techniques incertains, les transferts entre Osmosis et {prettyChainName} peuvent subir des retards importants ou un échec de transaction. Procédez à vos propres risques.",
+    "buttonContinue": "Continuer quand même",
+    "buttonCancel": "Annuler"
+  }
 }

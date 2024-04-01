@@ -1,5 +1,4 @@
 import { Dec } from "@keplr-wallet/unit";
-import { PriceRange } from "@osmosis-labs/stores";
 import { curveNatural } from "@visx/curve";
 import { LinearGradient } from "@visx/gradient";
 import { ParentSize } from "@visx/responsive";
@@ -19,13 +18,13 @@ import {
 import classNames from "classnames";
 import dayjs from "dayjs";
 import { observer } from "mobx-react-lite";
-import React, { FunctionComponent } from "react";
+import React, { FunctionComponent, memo } from "react";
 
 import { Icon } from "~/components/assets";
-import { ChartButton } from "~/components/buttons";
-import { useTranslation } from "~/hooks";
+import { ChartButton } from "~/components/ui/button";
+import { type PriceRange, useTranslation } from "~/hooks";
 import { theme } from "~/tailwind.config";
-import { formatPretty } from "~/utils/formatter";
+import { FormatOptions, formatPretty } from "~/utils/formatter";
 import { getDecimalCount } from "~/utils/number";
 
 const TokenPairHistoricalChart: FunctionComponent<{
@@ -49,19 +48,19 @@ const TokenPairHistoricalChart: FunctionComponent<{
    */
   showTooltip?: boolean;
   fiatSymbol?: string;
-}> = ({
-  data,
-  annotations,
-  domain,
-  onPointerHover,
-  onPointerOut,
-  showGradient = true,
-  minimal = false,
-  xNumTicks = 4,
-  showTooltip = false,
-  fiatSymbol,
-}) => {
-  return (
+}> = memo(
+  ({
+    data,
+    annotations,
+    domain,
+    onPointerHover,
+    onPointerOut,
+    showGradient = true,
+    minimal = false,
+    xNumTicks = 4,
+    showTooltip = false,
+    fiatSymbol,
+  }) => (
     <ParentSize
       className={`flex-shrink-1 flex-1 ${
         !minimal ? "overflow-hidden" : "[&>svg]:overflow-visible"
@@ -184,37 +183,68 @@ const TokenPairHistoricalChart: FunctionComponent<{
             </Annotation>
           ))}
           <Tooltip
-            snapTooltipToDatumX
-            snapTooltipToDatumY
             detectBounds
             showDatumGlyph
-            glyphStyle={{
-              strokeWidth: 0,
-              fill: theme.colors.wosmongton["200"],
-            }}
             horizontalCrosshairStyle={{
-              strokeWidth: 1,
-              stroke: "#ffffff",
+              strokeWidth: 2,
+              strokeDasharray: "5 5",
+              opacity: 0.17,
+              stroke: theme.colors.osmoverse[300],
             }}
             verticalCrosshairStyle={{
-              strokeWidth: 1,
-              stroke: "#ffffff",
+              strokeWidth: 2,
+              strokeDasharray: "5 5",
+              opacity: 0.17,
+              stroke: theme.colors.osmoverse[300],
             }}
+            showVerticalCrosshair={true}
             renderTooltip={({ tooltipData }: any) => {
               const close = tooltipData?.nearestDatum?.datum?.close;
               const time = tooltipData?.nearestDatum?.datum?.time;
 
               if (showTooltip && time && close) {
-                const maxDecimals = Math.max(getDecimalCount(close), 2);
                 const date = dayjs(time).format("MMM Do, hh:mma");
+                const minimumDecimals = 2;
+                const maxDecimals = Math.max(
+                  getDecimalCount(close),
+                  minimumDecimals
+                );
+
+                const closeDec = new Dec(close);
+
+                /**
+                 * We need to know how long the integer part of the number is in order to calculate then how many decimal places.
+                 */
+                const integerPartLength =
+                  closeDec.truncate().toString().length ?? 0;
+
+                /**
+                 * If a number is less then $100, we only show 4 significant digits, examples:
+                 *  OSMO: $1.612
+                 *  AXL: $0.9032
+                 *  STARS: $0.03673
+                 *  HUAHUA: $0.00001231
+                 *
+                 * If a number is greater or equal to $100, we show a dynamic significant digits based on it's integer part, examples:
+                 * BTC: $47,334.21
+                 * ETH: $3,441.15
+                 */
+                const maximumSignificantDigits = closeDec.lt(new Dec(100))
+                  ? 4
+                  : integerPartLength + 2;
 
                 return (
-                  <div className="flex flex-col gap-1 rounded-xl bg-osmoverse-1000 p-3 shadow-md">
+                  <div className="relative flex flex-col gap-1 rounded-xl bg-osmoverse-1000 p-3 shadow-md">
                     <h6 className="text-h6 font-semibold text-white-full">
                       {fiatSymbol}
                       {formatPretty(new Dec(close), {
                         maxDecimals,
-                        notation: "compact",
+                        notation: "standard",
+                        maximumSignificantDigits,
+                        minimumSignificantDigits: maximumSignificantDigits,
+                        minimumFractionDigits: 4,
+                        maximumFractionDigits: 4,
+                        disabledTrimZeros: true,
                       }) || ""}
                     </h6>
 
@@ -231,8 +261,8 @@ const TokenPairHistoricalChart: FunctionComponent<{
         </XYChart>
       )}
     </ParentSize>
-  );
-};
+  )
+);
 
 export default TokenPairHistoricalChart;
 
@@ -241,6 +271,7 @@ export const PriceChartHeader: FunctionComponent<{
   setHistoricalRange: (pr: PriceRange) => void;
   hoverPrice: number;
   decimal: number;
+  formatOpts?: FormatOptions;
   fiatSymbol?: string;
   baseDenom?: string;
   quoteDenom?: string;
@@ -260,6 +291,7 @@ export const PriceChartHeader: FunctionComponent<{
     baseDenom,
     quoteDenom,
     hoverPrice,
+    formatOpts,
     decimal,
     hideButtons,
     classes,
@@ -271,7 +303,7 @@ export const PriceChartHeader: FunctionComponent<{
     return (
       <div
         className={classNames(
-          "flex flex-row sm:flex-col-reverse sm:items-start sm:gap-y-4",
+          "flex flex-row lg:flex-col-reverse sm:items-start sm:gap-y-4",
           classes?.pricesHeaderRootContainer
         )}
       >
@@ -291,6 +323,7 @@ export const PriceChartHeader: FunctionComponent<{
             {formatPretty(new Dec(hoverPrice), {
               maxDecimals: decimal,
               notation: "compact",
+              ...formatOpts,
             }) || ""}
           </h4>
           {baseDenom && quoteDenom ? (
@@ -364,7 +397,7 @@ export const ChartUnavailable: FunctionComponent = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="gap m-auto flex items-center gap-2">
+    <div className="gap m-auto flex items-center gap-2 px-8 md:px-6">
       <Icon id="alert-triangle" color={theme.colors.osmoverse["400"]} />
       <span className="subtitle1 text-osmoverse-400">
         {t("errors.chartUnavailable")}

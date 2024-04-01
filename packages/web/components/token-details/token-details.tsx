@@ -1,20 +1,19 @@
 import { FiatCurrency } from "@keplr-wallet/types";
 import { Dec, PricePretty } from "@keplr-wallet/unit";
+import { CoingeckoCoin, TokenCMSData } from "@osmosis-labs/server";
 import { getAssetFromAssetList } from "@osmosis-labs/utils";
 import { observer } from "mobx-react-lite";
 import React, { FunctionComponent, useMemo, useState } from "react";
 
 import { Icon } from "~/components/assets";
 import ClipboardButton from "~/components/buttons/clipboard-button";
-import LinkIconButton from "~/components/buttons/link-icon-button";
 import Markdown from "~/components/markdown";
+import { LinkIconButton } from "~/components/ui/button";
 import { COINGECKO_PUBLIC_URL, EventName, TWITTER_PUBLIC_URL } from "~/config";
 import { AssetLists } from "~/config/generated/asset-lists";
 import { ChainList } from "~/config/generated/chain-list";
 import { useAmplitudeAnalytics, useTranslation } from "~/hooks";
 import { useCurrentLanguage } from "~/hooks";
-import { CoingeckoCoin } from "~/server/queries/coingecko/coin";
-import { TokenCMSData } from "~/server/queries/external";
 import { useStore } from "~/stores";
 import { formatPretty } from "~/utils/formatter";
 
@@ -185,8 +184,6 @@ const TokenDetails = ({
                   <LinkIconButton
                     href={twitterUrl}
                     target="_blank"
-                    mode="icon-social"
-                    size="md-icon-social"
                     aria-label={t("tokenInfos.ariaViewOn", { name: "X" })}
                     icon={
                       <Icon className="h-4 w-4 text-osmoverse-400" id="X" />
@@ -197,8 +194,6 @@ const TokenDetails = ({
                   <LinkIconButton
                     href={websiteURL}
                     target="_blank"
-                    mode="icon-social"
-                    size="md-icon-social"
                     aria-label={t("tokenInfos.ariaView", { name: "website" })}
                     icon={
                       <Icon className="h-6 w-6 text-osmoverse-400" id="web" />
@@ -209,8 +204,6 @@ const TokenDetails = ({
                   <LinkIconButton
                     href={coingeckoURL}
                     target="_blank"
-                    mode="icon-social"
-                    size="md-icon-social"
                     aria-label={t("tokenInfos.ariaViewOn", {
                       name: "CoinGecko",
                     })}

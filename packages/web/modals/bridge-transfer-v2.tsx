@@ -8,7 +8,8 @@ import {
 } from "@keplr-wallet/unit";
 import { DeliverTxResponse } from "@osmosis-labs/stores";
 import { Currency } from "@osmosis-labs/types";
-import classNames from "classnames";
+import { getKeyByValue } from "@osmosis-labs/utils";
+import { noop } from "@osmosis-labs/utils";
 import dayjs from "dayjs";
 import { observer } from "mobx-react-lite";
 import Link from "next/link";
@@ -24,8 +25,8 @@ import { Required } from "utility-types";
 import { isAddress } from "web3-utils";
 
 import { displayToast, ToastType } from "~/components/alert";
-import { Button, buttonCVA } from "~/components/buttons";
 import { Transfer, TransferProps } from "~/components/complex/transfer";
+import { Button } from "~/components/ui/button";
 import { EventName } from "~/config";
 import {
   useAmountConfig,
@@ -64,8 +65,6 @@ import { ModalBase, ModalBaseProps } from "~/modals/base";
 import { useStore } from "~/stores";
 import { IBCBalance } from "~/stores/assets";
 import { ErrorTypes } from "~/utils/error-types";
-import { noop } from "~/utils/function";
-import { getKeyByValue } from "~/utils/object";
 import { createContext } from "~/utils/react-context";
 import { api } from "~/utils/trpc";
 
@@ -1325,10 +1324,7 @@ export const TransferContent: FunctionComponent<
       <div className="mt-6 flex w-full flex-col items-center justify-center gap-3 md:mt-4">
         {walletConnected ? (
           <Button
-            className={classNames(
-              "transition-opacity duration-300 hover:opacity-75",
-              { "opacity-30": isLoadingBridgeQuote }
-            )}
+            className="w-full"
             disabled={
               (!userCanInteract && !userDisconnectedEthWallet) ||
               (isDeposit &&
@@ -1347,10 +1343,10 @@ export const TransferContent: FunctionComponent<
               isDisabledProp ||
               !counterpartyAddress
             }
-            mode={
+            variant={
               warnUserOfSlippage || warnUserOfPriceImpact
-                ? "primary-warning"
-                : undefined
+                ? "destructive"
+                : "default"
             }
             onClick={() => {
               if (isDeposit && userDisconnectedEthWallet)
@@ -1365,12 +1361,8 @@ export const TransferContent: FunctionComponent<
         )}
         <Link
           href="/disclaimer#providers-and-bridge-disclaimer"
-          className={buttonCVA({
-            className: "caption font-semibold",
-            mode: "text-white",
-            size: "text",
-          })}
           target="_blank"
+          className="text-xs font-semibold text-wosmongton-100 hover:text-rust-200"
         >
           {t("disclaimer")}
         </Link>

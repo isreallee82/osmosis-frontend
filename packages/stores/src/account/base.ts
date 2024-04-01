@@ -45,7 +45,12 @@ import {
   osmosisProtoRegistry,
 } from "@osmosis-labs/proto-codecs";
 import type { AssetList, Chain } from "@osmosis-labs/types";
-import { apiClient, ApiClientError, isNil } from "@osmosis-labs/utils";
+import {
+  apiClient,
+  ApiClientError,
+  getChain,
+  isNil,
+} from "@osmosis-labs/utils";
 import axios from "axios";
 import { Buffer } from "buffer/";
 import cachified, { CacheEntry } from "cachified";
@@ -79,6 +84,7 @@ import {
   DefaultGasPriceStep,
   getEndpointString,
   getWalletEndpoints,
+  InsufficientFeeError,
   logger,
   makeSignDocAmino,
   removeLastSlash,
@@ -127,7 +133,7 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
     ...cosmosProtoRegistry,
     ...ibcProtoRegistry,
     ...osmosisProtoRegistry,
-  ]) as unknown as SigningStargateClient["registry"];
+  ]);
 
   private _cache = new LRUCache<string, CacheEntry>({ max: 30 });
 
@@ -199,7 +205,8 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
       {
         signingStargate: () => ({
           aminoTypes: this.aminoTypes,
-          registry: this.registry,
+          registry: this
+            .registry as unknown as SigningStargateClient["registry"],
         }),
       },
       {
@@ -266,7 +273,7 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
     const walletRepo = this.walletManager.walletRepos.find(
       (repo) =>
         repo.chainName === chainNameOrId ||
-        repo.chainRecord.chain.chain_id === chainNameOrId
+        repo.chainRecord.chain?.chain_id === chainNameOrId
     );
 
     if (!walletRepo) {
@@ -460,7 +467,7 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
     msgs: EncodeObject[] | (() => Promise<EncodeObject[]> | EncodeObject[]),
     memo = "",
     fee?: TxFee,
-    _signOptions?: KeplrSignOptions,
+    signOptions?: KeplrSignOptions,
     onTxEvents?:
       | ((tx: DeliverTxResponse) => void)
       | {
@@ -510,20 +517,31 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
         );
       }
 
+      const mergedSignOptions = {
+        ...wallet.walletInfo?.signOptions,
+        ...signOptions,
+      };
+
       let usedFee: TxFee;
       if (typeof fee === "undefined" || !fee?.force) {
-        usedFee = await this.estimateFee(
+        usedFee = await this.estimateFee({
           wallet,
-          msgs,
-          fee ?? { amount: [] },
+          messages: msgs,
+          initialFee: fee ?? { amount: [] },
           memo,
-          wallet.walletInfo?.signOptions
-        );
+          signOptions: mergedSignOptions,
+        });
       } else {
         usedFee = fee;
       }
 
-      const txRaw = await this.sign(wallet, msgs, usedFee, memo || "");
+      const txRaw = await this.sign({
+        wallet,
+        fee: usedFee,
+        memo: memo || "",
+        messages: msgs,
+        signOptions: mergedSignOptions,
+      });
       const encodedTx = TxRaw.encode(txRaw).finish();
 
       const restEndpoint = getEndpointString(
@@ -660,12 +678,19 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
     }
   }
 
-  public async sign(
-    wallet: AccountStoreWallet,
-    messages: readonly EncodeObject[],
-    fee: TxFee,
-    memo: string
-  ): Promise<TxRaw> {
+  public async sign({
+    wallet,
+    messages,
+    fee,
+    memo,
+    signOptions,
+  }: {
+    wallet: AccountStoreWallet;
+    messages: readonly EncodeObject[];
+    fee: TxFee;
+    memo: string;
+    signOptions?: SignOptions;
+  }): Promise<TxRaw> {
     const { accountNumber, sequence } = await this.getSequence(wallet);
     const chainId = wallet?.chainId;
 
@@ -690,32 +715,43 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
     };
 
     return "signAmino" in offlineSigner || "signAmino" in wallet.client
-      ? this.signAmino(
+      ? this.signAmino({
           wallet,
-          wallet.address ?? "",
+          signerAddress: wallet.address ?? "",
           messages,
           fee,
           memo,
-          signerData
-        )
-      : this.signDirect(
+          signerData,
+          signOptions,
+        })
+      : this.signDirect({
           wallet,
-          wallet.address ?? "",
+          signerAddress: wallet.address ?? "",
           messages,
           fee,
           memo,
-          signerData
-        );
+          signerData,
+          signOptions,
+        });
   }
 
-  private async signAmino(
-    wallet: AccountStoreWallet,
-    signerAddress: string,
-    messages: readonly EncodeObject[],
-    fee: TxFee,
-    memo: string,
-    { accountNumber, sequence, chainId }: SignerData
-  ): Promise<TxRaw> {
+  private async signAmino({
+    wallet,
+    signerAddress,
+    messages,
+    fee,
+    memo,
+    signerData: { accountNumber, sequence, chainId },
+    signOptions,
+  }: {
+    wallet: AccountStoreWallet;
+    signerAddress: string;
+    messages: readonly EncodeObject[];
+    fee: TxFee;
+    memo: string;
+    signerData: SignerData;
+    signOptions?: SignOptions;
+  }): Promise<TxRaw> {
     if (!wallet.offlineSigner) {
       throw new Error("offlineSigner is not available in wallet");
     }
@@ -733,6 +769,15 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
 
     if (!accountFromSigner) {
       throw new Error("Failed to retrieve account from signer");
+    }
+
+    if (memo === "") {
+      // If the memo is empty, set it to "FE" so we know it originated from the frontend for
+      // QA purposes.
+      memo = "FE";
+    } else {
+      // Otherwise, tack on "FE" to the end of the memo.
+      memo += " \nFE";
     }
 
     const pubkey = encodePubkey(
@@ -766,29 +811,26 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
           wallet.chainId,
           signerAddress,
           signDoc,
-          wallet.walletInfo?.signOptions
+          signOptions
         )
       : (wallet.offlineSigner as unknown as OfflineAminoSigner).signAmino(
           signerAddress,
           signDoc
         ));
 
-    const signedTxBodyBytes =
-      wallet?.signingStargateOptions?.registry?.encodeTxBody({
-        messages: signed.msgs.map((msg) => {
-          const res: any =
-            wallet?.signingStargateOptions?.aminoTypes?.fromAmino(msg);
-          // Include the 'memo' field again because the 'registry' omits it
-          if (msg.value.memo) {
-            res.value.memo = msg.value.memo;
-          }
-          return res;
-        }),
-        memo: signed.memo,
-        timeoutHeight: Long.fromString(
-          signDoc.timeout_height ?? timeoutHeightDisabledStr
-        ),
-      });
+    const signedTxBodyBytes = this.registry?.encodeTxBody({
+      messages: signed.msgs.map((msg) => {
+        const res: any =
+          wallet?.signingStargateOptions?.aminoTypes?.fromAmino(msg);
+        // Include the 'memo' field again because the 'registry' omits it
+        if (msg.value.memo) {
+          res.value.memo = msg.value.memo;
+        }
+        return res;
+      }),
+      memo: signed.memo,
+      timeoutHeight: BigInt(signDoc.timeout_height ?? timeoutHeightDisabledStr),
+    });
 
     const signedGasLimit = Int53.fromString(String(signed.fee.gas)).toNumber();
     const signedSequence = Int53.fromString(String(signed.sequence)).toNumber();
@@ -832,14 +874,23 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
     return BigInt(latestBlockHeight) + NEXT_TX_TIMEOUT_HEIGHT_OFFSET;
   }
 
-  private async signDirect(
-    wallet: AccountStoreWallet,
-    signerAddress: string,
-    messages: readonly EncodeObject[],
-    fee: TxFee,
-    memo: string,
-    { accountNumber, sequence, chainId }: SignerData
-  ): Promise<TxRaw> {
+  private async signDirect({
+    wallet,
+    signerAddress,
+    messages,
+    fee,
+    memo,
+    signerData: { accountNumber, sequence, chainId },
+    signOptions,
+  }: {
+    wallet: AccountStoreWallet;
+    signerAddress: string;
+    messages: readonly EncodeObject[];
+    fee: TxFee;
+    memo: string;
+    signerData: SignerData;
+    signOptions?: SignOptions;
+  }): Promise<TxRaw> {
     if (!wallet.offlineSigner) {
       throw new Error("offlineSigner is not available in wallet");
     }
@@ -860,6 +911,16 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
     const pubkey = encodePubkey(
       encodeSecp256k1Pubkey(accountFromSigner.pubkey)
     );
+
+    if (memo === "") {
+      // If the memo is empty, set it to "FE" so we know it originated from the frontend for
+      // QA purposes.
+      memo = "FE";
+    } else {
+      // Otherwise, tack on "FE" to the end of the memo.
+      memo += " \nFE";
+    }
+
     const txBodyEncodeObject = {
       typeUrl: "/cosmos.tx.v1beta1.TxBody",
       value: {
@@ -867,9 +928,7 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
         memo: memo,
       },
     };
-    const txBodyBytes = wallet?.signingStargateOptions?.registry?.encode(
-      txBodyEncodeObject
-    ) as Uint8Array;
+    const txBodyBytes = this.registry?.encode(txBodyEncodeObject) as Uint8Array;
     const gasLimit = Int53.fromString(String(fee.gas)).toNumber();
     const authInfoBytes = makeAuthInfoBytes(
       [{ pubkey, sequence }],
@@ -889,8 +948,11 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
       ? wallet.client.signDirect(
           wallet.chainId,
           signerAddress,
-          signDoc,
-          wallet.walletInfo?.signOptions
+          {
+            ...signDoc,
+            accountNumber: Long.fromString(signDoc.accountNumber.toString()),
+          },
+          signOptions
         )
       : (wallet.offlineSigner as unknown as OfflineDirectSigner).signDirect(
           signerAddress,
@@ -965,23 +1027,29 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
    * 1. Encodes the messages using the available registry.
    * 2. Constructs an unsigned transaction object, including specific signing modes, and possibly ignores the public key in simulation.
    * 3. Sends a POST request to simulate the transaction.
-   * 4. Calculates the estimated gas used, multiplying by a fixed factor (2) to provide a buffer.
+   * 4. Calculates the estimated gas used, multiplying by a fixed factor (1.5) to provide a buffer.
    * 5. Includes specific error handling for errors returned from the axios request.
    * 6. Utilizes a placeholder signature since the transaction signature is not actually verified.
    *
    * Note: The estimated gas might be slightly lower than actual given fluctuations in gas prices.
-   * This is offset by multiplying the estimated gas by a fixed factor (2) to provide a buffer.
+   * This is offset by multiplying the estimated gas by a fixed factor (1.5) to provide a buffer.
    *
    * If the chain does not support transaction simulation, the function may
    * fall back to using the provided fee parameter.
    */
-  public async estimateFee(
-    wallet: AccountStoreWallet,
-    messages: readonly EncodeObject[],
-    fee: Optional<TxFee, "gas">,
-    memo: string,
-    signOptions: SignOptions = {}
-  ): Promise<TxFee> {
+  public async estimateFee({
+    wallet,
+    messages,
+    initialFee = { amount: [] },
+    memo = "",
+    signOptions = {},
+  }: {
+    wallet: AccountStoreWallet;
+    messages: readonly EncodeObject[];
+    initialFee?: Optional<TxFee, "gas">;
+    memo?: string;
+    signOptions?: SignOptions;
+  }): Promise<TxFee> {
     const encodedMessages = messages.map((m) => this.registry.encodeAsAny(m));
     const { sequence } = await this.getSequence(wallet);
 
@@ -1008,7 +1076,7 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
           }),
         ],
         fee: Fee.fromPartial({
-          amount: fee.amount.map((amount) => {
+          amount: initialFee.amount.map((amount) => {
             return { amount: amount.amount, denom: amount.denom };
           }),
         }),
@@ -1041,17 +1109,27 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
        * The gas amount is multiplied by a specific factor to provide additional
        * gas to the transaction, mitigating the risk of failure due to fluctuating gas prices.
        *  */
-      const gas = String(Math.round(gasUsed * GasMultiplier));
+      const gasLimit = String(Math.round(gasUsed * GasMultiplier));
 
+      /**
+       * Compute the fee amount based on the gas limit and the gas price rather than on the wallet.
+       * This is useful for wallets that do not support fee estimation.
+       */
       if (signOptions.preferNoSetFee) {
         return {
-          gas,
-          amount: [await this.getGasAmount(gas, wallet.chainId)],
+          gas: gasLimit,
+          amount: [
+            await this.getFeeAmount({
+              gasLimit,
+              chainId: wallet.chainId,
+              address: wallet.address,
+            }),
+          ],
         };
       }
 
       return {
-        gas,
+        gas: gasLimit,
         amount: [],
       };
     } catch (e) {
@@ -1070,8 +1148,8 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
          * If the error message includes "invalid empty tx", it means that the chain does not
          * support tx simulation. In this case, just return the backup fee if available.
          */
-        if (message.includes("invalid empty tx") && fee.gas) {
-          return fee as TxFee;
+        if (message.includes("invalid empty tx") && initialFee.gas) {
+          return initialFee as TxFee;
         }
 
         // If there is a code, it's a simulate tx error and we should forward its message.
@@ -1084,18 +1162,169 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
     }
   }
 
-  async getGasAmount(gasLimit: string, chainId: string) {
-    let gasPrice: number | undefined;
+  /**
+   * Calculates the fee coin amount required for a transaction based on the gas limit, chain ID, and user address.
+   * It considers the chain's gas price and the user's balance for the fee token. If the chain supports the
+   * Osmosis fee module and the user doesn't have enough balance for the primary fee token, it attempts to find
+   * an alternative fee token that the user has sufficient balance for.
+   *
+   * @param {string} params.gasLimit - The gas limit for the transaction.
+   * @param {string} params.chainId - The ID of the chain where the transaction will be executed.
+   * @param {string | undefined} params.address - The address of the user executing the transaction. If undefined, a default fee calculation is used.
+   * @throws {InsufficientFeeError} - Throws an error if the user doesn't have enough balance for the fee token.
+   *
+   * @example
+   * const gasAmount = await accountStore.getFeeAmount({
+   *   gasLimit: "200000",
+   *   chainId: "osmosis-1",
+   *   address: "osmo1..."
+   * });
+   * console.log(gasAmount); // { amount: "1000", denom: "uosmo" }
+   */
+  async getFeeAmount({
+    gasLimit,
+    chainId,
+    address,
+  }: {
+    gasLimit: string;
+    chainId: string;
+    address: string | undefined;
+  }) {
+    const chain = getChain({ chainList: this.chains, chainId });
 
-    const counterpartyChain = this.chains.find(
-      ({ chain_id }) => chain_id === chainId
+    let fee: TxFee["amount"][number];
+
+    if (!address) {
+      const { feeDenom, gasPrice } = await this.getGasPriceByChainId({
+        chainId,
+      });
+      fee = {
+        amount: gasPrice.mul(new Dec(gasLimit)).roundUp().toString(),
+        denom: feeDenom,
+      };
+      return fee;
+    }
+
+    const [{ gasPrice: chainGasPrice, feeDenom }, { balances }] =
+      await Promise.all([
+        this.getGasPriceByChainId({
+          chainId,
+        }),
+        this.queryAccountBalance({
+          userOsmoAddress: address,
+          chainId,
+        }),
+      ]);
+    fee = {
+      amount: chainGasPrice.mul(new Dec(gasLimit)).roundUp().toString(),
+      denom: feeDenom,
+    };
+
+    const userBalanceForFeeDenom = balances.find(
+      (balance) => balance.denom === fee.denom
     );
 
-    if (!counterpartyChain) throw new Error(`Chain (${chainId}) not found`);
+    const chainHasOsmosisFeeModule = Boolean(
+      chain?.features?.includes("osmosis-txfees")
+    );
 
-    if (chainId === this.osmosisChainId) {
+    const isUserBalanceInsufficientForBaseChainFee =
+      (userBalanceForFeeDenom &&
+        new Dec(fee.amount).gt(new Dec(userBalanceForFeeDenom.amount))) ||
+      !userBalanceForFeeDenom;
+
+    /**
+     * If the chain doesn't support the Osmosis chain fee module, check that the user has enough balance
+     * to pay the fee denom, otherwise throw an error.
+     */
+    if (!chainHasOsmosisFeeModule && isUserBalanceInsufficientForBaseChainFee) {
+      console.error(
+        `Insufficient balance for the base fee token (${fee.denom}).`
+      );
+      throw new InsufficientFeeError(
+        "Insufficient balance for transaction fees. Please add funds to continue."
+      );
+    }
+
+    /**
+     * If the chain supports the Osmosis chain fee module, check that the user has enough balance
+     * to pay the fee denom, otherwise find another fee token to use.
+     */
+    if (chainHasOsmosisFeeModule && isUserBalanceInsufficientForBaseChainFee) {
+      const { feeTokens } = await this.queryFeeTokens({ chainId });
+
+      const feeTokenUserBalances = balances.filter((balance) =>
+        feeTokens.includes(balance.denom)
+      );
+
+      if (!feeTokenUserBalances.length) {
+        console.error("No fee tokens found with sufficient balance.");
+        throw new InsufficientFeeError(
+          "Insufficient balance for transaction fees. Please add funds to continue."
+        );
+      }
+
+      let alternateFee: TxFee["amount"][number] | undefined;
+      for (const feeTokenBalance of feeTokenUserBalances) {
+        try {
+          const { gasPrice: feeDenomGasPrice } =
+            await this.getGasPriceByFeeDenom({
+              feeDenom: feeTokenBalance.denom,
+              chainId: chainId,
+              // Here chain gas price is the osmosis eip base fee since the osmosis fee module is enabled.
+              baseFee: chainGasPrice.toString(),
+            });
+          const amount = feeDenomGasPrice
+            .mul(new Dec(gasLimit))
+            .truncate()
+            .toString();
+
+          // If the fee is greater than the user's balance, continue to the next fee token.
+          if (new Dec(amount).gt(new Dec(feeTokenBalance.amount))) continue;
+
+          alternateFee = {
+            amount,
+            denom: feeTokenBalance.denom,
+          };
+          break;
+        } catch {
+          console.warn(
+            `Failed to fetch gas price for fee token ${feeTokenBalance.denom}.`
+          );
+        }
+      }
+
+      if (!alternateFee) {
+        console.error("No fee token found with sufficient balance.");
+        throw new InsufficientFeeError(
+          "Insufficient balance for transaction fees. Please add funds to continue."
+        );
+      }
+
+      fee = alternateFee;
+    }
+
+    return fee;
+  }
+
+  private async getGasPriceByChainId({
+    chainId,
+  }: {
+    chainId: string;
+  }): Promise<{ gasPrice: Dec; feeDenom: string }> {
+    let gasPrice: number | undefined;
+
+    const chain = this.chains.find(({ chain_id }) => chain_id === chainId);
+
+    if (!chain) throw new Error(`Chain (${chainId}) not found`);
+
+    const chainHasOsmosisFeeModule = Boolean(
+      chain?.features?.includes("osmosis-txfees")
+    );
+
+    if (chainHasOsmosisFeeModule || chainId === this.osmosisChainId) {
       try {
-        const result = await this.queryOsmosisGasPrice();
+        const result = await this.queryOsmosisGasPrice({ chainId });
 
         /**
          * The gas amount is multiplied by a specific factor to provide additional
@@ -1110,7 +1339,7 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
       }
     }
 
-    const feeCurrency = counterpartyChain.fees.fee_tokens[0];
+    const feeCurrency = chain.fees.fee_tokens[0];
     if (isNil(gasPrice) && feeCurrency && feeCurrency.average_gas_price) {
       gasPrice = feeCurrency.average_gas_price;
     }
@@ -1119,23 +1348,181 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
       gasPrice = DefaultGasPriceStep.average;
     }
 
-    const gasPriceDec = new Dec(gasPrice);
-    return {
-      amount: gasPriceDec.mul(new Dec(gasLimit)).roundUp().toString(),
-      denom: feeCurrency.denom,
-    };
+    return { gasPrice: new Dec(gasPrice), feeDenom: feeCurrency.denom };
   }
 
-  public async queryOsmosisGasPrice() {
+  /**
+   * Calculates the gas price for a given fee denom by fetching the spot price of the fee token
+   * and dividing the base fee by the spot price. This method is particularly useful for chains that
+   * have the Osmosis fee module, allowing for dynamic fee token usage based on market prices.
+   *
+   * The formula to compute gas price for a given fee token is:
+   * gasPrice = baseFee / spotPrice * 1.01
+   *
+   * Note: we multiply by 1.01 to provide a buffer for the gas price.
+   *
+   *
+   */
+  private async getGasPriceByFeeDenom({
+    chainId,
+    feeDenom,
+    baseFee,
+  }: {
+    /**
+     * Chain to fetch the fee token spot price from.
+     * This requires the chain to have the Osmosis fee module.
+     */
+    chainId: string;
+    feeDenom: string;
+    /**
+     * The osmosis fee module current base fee token to use for
+     * the gas price calculation. It can be fetched with this.queryOsmosisGasPrice
+     */
+    baseFee: string | undefined;
+  }): Promise<{ gasPrice: Dec }> {
+    const spotPriceDec = new Dec(
+      (
+        await this.queryFeeTokenSpotPrice({
+          chainId: chainId,
+          denom: feeDenom,
+        })
+      ).spotPrice
+    );
+
+    if (spotPriceDec.lte(new Dec(0))) {
+      throw new Error(`Failed to fetch spot price for fee token ${feeDenom}.`);
+    }
+
+    const gasPrice = new Dec(baseFee ?? DefaultGasPriceStep.average)
+      .quo(spotPriceDec)
+      .mul(new Dec(1.01));
+
+    return { gasPrice };
+  }
+
+  // TODO: Get this query from the server package once it exists.
+  private async queryAccountBalance({
+    userOsmoAddress,
+    chainId,
+  }: {
+    chainId: string;
+    userOsmoAddress: string;
+  }) {
+    return cachified({
+      key: "account-balance",
+      cache: this._cache,
+      // 5 seconds
+      ttl: 5_000,
+      getFreshValue: async () => {
+        const restEndpoint = this.chainGetter.getChain(chainId).rest;
+
+        if (!restEndpoint)
+          throw new Error(
+            `Rest endpoint for chain ${chainId} is not provided.`
+          );
+
+        const result = await apiClient<{
+          balances: {
+            denom: string;
+            amount: string;
+          }[];
+        }>(`${restEndpoint}/cosmos/bank/v1beta1/balances/${userOsmoAddress}`);
+
+        return {
+          balances: result.balances,
+        };
+      },
+    });
+  }
+
+  /**
+   * Fetches and caches the fee tokens denoms from chains that have the fee module.
+   *
+   * @example
+   * ```typescript
+   * const feeTokensInfo = await queryFeeTokens();
+   * console.log(feeTokensInfo);
+   * // Output: { feeTokens: ["ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2", ...] }
+   * ```
+   */
+  // TODO: Get this query from the server package once it exists.
+  private async queryFeeTokens({ chainId }: { chainId: string }) {
+    return cachified({
+      key: "fee-tokens",
+      cache: this._cache,
+      // 15 minutes
+      ttl: 15 * 60 * 1000,
+      getFreshValue: async () => {
+        const restEndpoint = this.chainGetter.getChain(chainId).rest;
+
+        if (!restEndpoint)
+          throw new Error(
+            `Rest endpoint for chain ${chainId} is not provided.`
+          );
+
+        const [baseFeeToken, { fee_tokens: feeTokens }] = await Promise.all([
+          apiClient<{ base_denom: string }>(
+            `${restEndpoint}/osmosis/txfees/v1beta1/base_denom`
+          ),
+          apiClient<{ fee_tokens: { denom: string; poolID: number }[] }>(
+            `${restEndpoint}/osmosis/txfees/v1beta1/fee_tokens`
+          ),
+        ]);
+
+        const baseFeeTokenDenom = baseFeeToken.base_denom;
+
+        return {
+          baseFeeTokenDenom,
+          feeTokens: feeTokens.map(({ denom }) => denom),
+        };
+      },
+    });
+  }
+
+  // TODO: Get this query from the server package once it exists.
+  private async queryFeeTokenSpotPrice({
+    denom,
+    chainId,
+  }: {
+    denom: string;
+    chainId: string;
+  }) {
+    return cachified({
+      key: `fee-token-spot-price-${denom}`,
+      cache: this._cache,
+      // 5 seconds
+      ttl: 5_000,
+      getFreshValue: async () => {
+        const restEndpoint = this.chainGetter.getChain(chainId).rest;
+
+        if (!restEndpoint)
+          throw new Error(
+            `Rest endpoint for chain ${chainId} is not provided.`
+          );
+
+        const result = await apiClient<{
+          pool_id: string;
+          spot_price: string;
+        }>(
+          `${restEndpoint}/osmosis/txfees/v1beta1/spot_price_by_denom?denom=${denom}`
+        );
+
+        return {
+          spotPrice: result.spot_price,
+        };
+      },
+    });
+  }
+
+  // TODO: Get this query from the server package once it exists.
+  private async queryOsmosisGasPrice({ chainId }: { chainId: string }) {
     return cachified({
       key: "osmosis-gas-price",
       cache: this._cache,
       // 15 minutes
       ttl: 15 * 60 * 1000,
       getFreshValue: async () => {
-        const restEndpoint = this.chainGetter.getChain(
-          this.osmosisChainId
-        ).rest;
+        const restEndpoint = this.chainGetter.getChain(chainId).rest;
         const result = await apiClient<{
           base_fee: string;
         }>(`${restEndpoint}/osmosis/txfees/v1beta1/cur_eip_base_fee`);

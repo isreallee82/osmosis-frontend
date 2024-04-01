@@ -13,7 +13,12 @@ import deepmerge from "deepmerge";
 import Long from "long";
 import { DeepPartial } from "utility-types";
 
-import { AccountStore, CosmosAccount, CosmwasmAccount } from "../../account";
+import {
+  AccountStore,
+  CosmosAccount,
+  CosmwasmAccount,
+  TxFee,
+} from "../../account";
 import { OsmosisQueries } from "../../queries";
 import { QueriesExternalStore } from "../../queries-external";
 import { DeliverTxResponse } from "../types";
@@ -577,12 +582,10 @@ export class OsmosisAccountImpl {
     superfluidValidatorAddress?: string,
     baseDeposit?: { currency: Currency; amount: string },
     quoteDeposit?: { currency: Currency; amount: string },
-    maxSlippage = "5",
+    maxSlippage = "15",
     memo: string = "",
     onFulfill?: (tx: DeliverTxResponse) => void
   ) {
-    if (poolId === "1247" || poolId === "1248") maxSlippage = "15";
-
     const queries = this.queries;
 
     const queryPool = queries.queryPools.getPool(poolId);
@@ -838,7 +841,7 @@ export class OsmosisAccountImpl {
       denom: string;
       amount: string;
     },
-    maxSlippage = DEFAULT_SLIPPAGE,
+    maxSlippage = "20",
     memo: string = "",
     onFulfill?: (tx: DeliverTxResponse) => void
   ) {
@@ -1087,20 +1090,14 @@ export class OsmosisAccountImpl {
     tokenIn: { currency: Currency },
     tokenOutMinAmount: string,
     memo: string = "",
-    signOptions?: KeplrSignOptions,
+    signOptions?: KeplrSignOptions & { fee?: TxFee },
     onFulfill?: (tx: DeliverTxResponse) => void
   ) {
     const msg = this.msgOpts.splitRouteSwapExactAmountIn.messageComposer({
-      sender: this.address,
-      routes: routes.map(({ pools, tokenInAmount }) => ({
-        pools: pools.map(({ id, tokenOutDenom }) => ({
-          poolId: BigInt(id),
-          tokenOutDenom: tokenOutDenom,
-        })),
-        tokenInAmount: tokenInAmount,
-      })),
-      tokenInDenom: tokenIn.currency.coinMinimalDenom,
+      routes,
+      tokenIn,
       tokenOutMinAmount,
+      userOsmoAddress: this.address,
     });
 
     await this.base.signAndBroadcast(
@@ -1108,7 +1105,7 @@ export class OsmosisAccountImpl {
       "splitRouteSwapExactAmountIn",
       [msg],
       memo,
-      undefined,
+      signOptions?.fee,
       signOptions,
       (tx) => {
         if (!tx.code) {
@@ -1165,22 +1162,14 @@ export class OsmosisAccountImpl {
     tokenIn: { currency: Currency; amount: string },
     tokenOutMinAmount: string,
     memo: string = "",
-    signOptions?: KeplrSignOptions,
+    signOptions?: KeplrSignOptions & { fee?: TxFee },
     onFulfill?: (tx: DeliverTxResponse) => void
   ) {
     const msg = this.msgOpts.swapExactAmountIn.messageComposer({
-      sender: this.address,
-      routes: pools.map(({ id, tokenOutDenom }) => {
-        return {
-          poolId: BigInt(id),
-          tokenOutDenom: tokenOutDenom,
-        };
-      }),
-      tokenIn: {
-        denom: tokenIn.currency.coinMinimalDenom,
-        amount: tokenIn.amount.toString(),
-      },
+      pools,
+      tokenIn,
       tokenOutMinAmount,
+      userOsmoAddress: this.address,
     });
 
     await this.base.signAndBroadcast(
@@ -1188,7 +1177,7 @@ export class OsmosisAccountImpl {
       "swapExactAmountIn",
       [msg],
       memo,
-      undefined,
+      signOptions?.fee,
       signOptions,
       (tx) => {
         if (!tx.code) {
@@ -1644,13 +1633,13 @@ export class OsmosisAccountImpl {
   async sendBeginUnlockingMsgOrSuperfluidUnbondLockMsgIfSyntheticLock(
     locks: {
       lockId: string;
-      isSyntheticLock: boolean;
+      isSynthetic: boolean;
     }[],
     memo: string = "",
     onFulfill?: (tx: DeliverTxResponse) => void
   ) {
     const msgs = locks.reduce((msgs, lock) => {
-      if (!lock.isSyntheticLock) {
+      if (!lock.isSynthetic) {
         // normal unlock
         msgs.push(
           this.msgOpts.beginUnlocking.messageComposer({

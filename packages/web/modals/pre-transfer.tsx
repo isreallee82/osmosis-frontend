@@ -1,15 +1,11 @@
 import { CoinPretty } from "@keplr-wallet/unit";
-import classNames from "classnames";
 import { observer } from "mobx-react-lite";
 import Image from "next/image";
 import { FunctionComponent } from "react";
 
-import { Info } from "~/components/alert";
-import { Button, buttonCVA } from "~/components/buttons";
 import { TokenSelect } from "~/components/control";
-import { UNSTABLE_MSG } from "~/config";
+import { Button } from "~/components/ui/button";
 import { useTranslation } from "~/hooks";
-import { useWindowSize } from "~/hooks";
 import { useCoinFiatValue } from "~/hooks/queries/assets/use-coin-fiat-value";
 import { ModalBase, ModalBaseProps } from "~/modals";
 import { ObservableAssets } from "~/stores/assets/assets-store";
@@ -21,7 +17,6 @@ export const PreTransferModal: FunctionComponent<
     tokens: CoinPretty[];
     externalDepositUrl?: string;
     externalWithdrawUrl?: string;
-    isUnstable?: boolean;
     onSelectToken: (coinDenom: string) => void;
     onWithdraw: () => void;
     onDeposit: () => void;
@@ -32,12 +27,10 @@ export const PreTransferModal: FunctionComponent<
     tokens,
     externalDepositUrl,
     externalWithdrawUrl,
-    isUnstable,
     onSelectToken,
     onWithdraw,
     onDeposit,
   } = props;
-  const { isMobile } = useWindowSize();
   const { t } = useTranslation();
   const tokenValue = useCoinFiatValue(selectedToken.balance);
   const isEthAsset = selectedToken.originBridgeInfo?.bridge === "axelar";
@@ -65,79 +58,44 @@ export const PreTransferModal: FunctionComponent<
             </span>
           )}
         </div>
-        {isUnstable && <Info message={UNSTABLE_MSG} isMobile={isMobile} />}
         <div className="flex place-content-between gap-3 py-2">
-          {externalWithdrawUrl ? (
-            <a
-              className={classNames(
-                buttonCVA({
-                  className:
-                    "h-10 w-full gap-2 border-wosmongton-200/30 bg-wosmongton-200/30 hover:border-wosmongton-200/40 hover:bg-wosmongton-200/40",
-                  mode: "primary",
-                }),
-                { "opacity-30": isUnstable }
-              )}
-              href={isUnstable ? "" : externalWithdrawUrl}
-              rel="noreferrer"
-              target="_blank"
-              style={
-                isUnstable
-                  ? { pointerEvents: "none", cursor: "default" }
-                  : undefined
-              }
-            >
-              {t("assets.table.preTransfer.withdraw")}
-              <Image
-                alt="external transfer link"
-                src="/icons/external-link-white.svg"
-                height={12}
-                width={12}
-              />
-            </a>
+          {Boolean(externalWithdrawUrl) ? (
+            <Button className="flex w-full gap-2" variant="outline" asChild>
+              <a href={externalDepositUrl} rel="noreferrer" target="_blank">
+                {t("assets.table.preTransfer.withdraw")}
+                <Image
+                  alt="external transfer link"
+                  src="/icons/external-link-white.svg"
+                  height={12}
+                  width={12}
+                />
+              </a>
+            </Button>
           ) : (
-            <Button
-              className="h-10 w-full"
-              mode="secondary"
-              disabled={isUnstable}
-              onClick={onWithdraw}
-            >
+            <Button className="w-full" variant="outline" onClick={onWithdraw}>
               {t("assets.table.preTransfer.withdraw")}
             </Button>
           )}
           {Boolean(externalDepositUrl) && (
-            <a
-              className={classNames(
-                buttonCVA({
-                  className:
-                    "h-10 w-full gap-2 border-wosmongton-300 bg-wosmongton-300",
-                  mode: "primary",
-                }),
-                { "opacity-30": isUnstable }
-              )}
-              href={isUnstable ? "" : externalDepositUrl}
-              rel="noreferrer"
-              target="_blank"
-              style={
-                isUnstable
-                  ? { pointerEvents: "none", cursor: "default" }
-                  : undefined
-              }
-            >
-              <span>{t("assets.table.preTransfer.deposit")}</span>
-              <Image
-                alt="external transfer link"
-                src="/icons/external-link-white.svg"
-                height={12}
-                width={12}
-              />
-            </a>
+            <Button className="flex w-full gap-2" asChild>
+              <a
+                href={externalDepositUrl}
+                rel="noreferrer"
+                target="_blank"
+                className="w-full"
+              >
+                <span>{t("assets.table.preTransfer.deposit")}</span>
+                <Image
+                  alt="external transfer link"
+                  src="/icons/external-link-white.svg"
+                  height={12}
+                  width={12}
+                />
+              </a>
+            </Button>
           )}
           {!isEthAsset && !externalDepositUrl && (
-            <Button
-              className="h-10 w-full"
-              disabled={isUnstable}
-              onClick={onDeposit}
-            >
+            <Button className="w-full" onClick={onDeposit}>
               {t("assets.table.preTransfer.deposit")}
             </Button>
           )}

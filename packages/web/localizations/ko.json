@@ -176,6 +176,7 @@
       "titleWithdraw": "출금할 지갑"
     },
     "stakedAssets": "스테이킹된 OSMO",
+    "pooledAssets": "풀링됨",
     "table": {
       "columns": {
         "assetChain": "자산 / 체인",
@@ -203,6 +204,7 @@
       "activate": "활성화"
     },
     "totalAssets": "총 자산",
+    "totalBalance": "전체 균형",
     "transfer": {
       "availableMobile": "잔고",
       "availableOn": "{network} 잔고",
@@ -272,6 +274,18 @@
       "activate": "확인되지 않은 자산 활성화",
       "description": "확인되지 않은 토큰입니다. 활성화하시겠습니까? 거래하기 전에 철저히 조사하십시오.",
       "reminder": "언제든지 설정 모달에서 이 설정을 비활성화할 수 있습니다."
+    },
+    "getStarted": {
+      "title": "{osmosis} 시작하기",
+      "description": "몇 단계만 거치면 지갑을 연결하고 자금을 조달하여 거래를 시작할 수 있습니다.",
+      "addFunds": "시작하려면 자금을 추가하세요."
+    },
+    "categories": {
+      "new": "최신",
+      "defi": "디파이",
+      "stablecoin": "스테이블코인",
+      "meme": "나 나",
+      "liquid_staking": "리퀴드 스테이킹"
     }
   },
   "buyTokens": "토큰 구매",
@@ -350,7 +364,8 @@
     "sequenceNumber": "동시 트랜잭션이 너무 많습니다. 이전 tx가 체인에 도달한 후 다시 보내보세요. (시퀀스: {sequence} )",
     "swapSlippage": "슬리피지로 인해 {coinDenom} 에 대한 스왑이 실패했습니다. 슬리피지 내성을 높여보세요.",
     "invalidAmounts": "잘못된 금액",
-    "txTimedOutError": "거래 시간이 초과되었습니다. 다시 시도해 주세요."
+    "txTimedOutError": "거래 시간이 초과되었습니다. 다시 시도해 주세요.",
+    "insufficientFee": "거래 수수료 잔액이 부족합니다. 계속하려면 자금을 추가하세요."
   },
   "frontierMigration": {
     "introducingUnverifiedAssets": "검증되지 않은 자산 소개",
@@ -550,8 +565,7 @@
   },
   "removeLiquidity": {
     "sharesAmount": "{shares} LP",
-    "title": "유동성 해제하기",
-    "titleInPool": "{poolId}풀에서 유동성을 제거합니다."
+    "title": "유동성 해제하기"
   },
   "requestRejected": "요청이 거부됨",
   "settings": {
@@ -597,7 +611,6 @@
     "unbondingPeriodTooltip": "락업된 토큰은 블록체인의 안정성을 높입니다. 토큰을 언스테이킹하면 지정된 언본딩 기간 이후에 토큰을 사용할 수 있습니다.",
     "estimatedEarningsTooltip": "이러한 수익은 현재 스테이킹된 APR을 기준으로 계산되며 변경될 수 있습니다.",
     "collectRewardsTooltipDisabled": "보상이 너무 낮아 수집할 수 없습니다. 미청구 잔액이 최소 기준인 {collectRewardsMinimumOsmo} OSMO에 도달한 후 다시 시도하세요.",
-    "isAPRTooHighTooltip": "이 검증인은 비정상적으로 높은 수수료를 받습니다. 다른 검증인을 선택하는 것을 고려해 보세요.",
     "isVotingPowerTooHighTooltip": "높은 보팅 파워를 지닌 상위 10개 검증인입니다. 분산화를 촉진하는 데 도움이 되도록 다른 검증인을 선택하는 것을 고려해보세요.",
     "learnMore": {
       "step1": {
@@ -648,20 +661,6 @@
         "buttonKeep": "기존 밸리데이터 유지",
         "buttonSelect": "새 밸리데이터 선택"
       }
-    },
-    "introModal": {
-      "callout": "새로운 기능",
-      "title": "오스모시스에 스테이킹하기",
-      "description": {
-        "1": "스테이킹은 자산으로 돈을 벌 수 있는 가장 쉬운 방법 중 하나입니다. 이제 Osmosis에 바로 OSMO를 스테이킹할 수 있습니다.",
-        "2": "최대 적립",
-        "3": "매년 스테이킹 보상을 받으세요!",
-        "4": "그리고 그것을 작동시키세요",
-        "5": "사용 가능한 {displayBalance} 작동시키고",
-        "button": "OSMO를 구매하세요"
-      },
-      "asterisk": "* 스테이킹 보상 가치는 가격 및 APR 변동성에 따라 달라질 수 있습니다.",
-      "button": "스테이킹 시작"
     }
   },
   "superfluidValidator": {
@@ -690,6 +689,8 @@
     "buttonError": "무시하고 교환하기",
     "expectedOutput": "예상 교환치",
     "fee": "교환 수수료 ({fee})",
+    "networkFee": "네트워크 수수료",
+    "totalFee": "총 수수료",
     "HALF": "절반",
     "MAX": "최대",
     "minimumSlippage": "슬리피지 이후 받을 최소수량 ({slippage})",
@@ -706,7 +707,8 @@
     "promo": {
       "newOpportunity": "수익을 올릴 수 있는 새로운 기회",
       "discoverSuperchargedPools": "슈퍼차지 풀 알아보기"
-    }
+    },
+    "dynamicSpreadFactor": "동적"
   },
   "walletSelect": {
     "connectionInProgress": "지갑 연결이 이미 진행 중입니다. 상태를 확인하기 위해 확장 프로그램을 열어주세요.",
@@ -752,7 +754,6 @@
   "unknownError": "알 수 없는 에러",
   "viewExplorer": "블록 익스플로러 보기",
   "waitingForTransaction": "트랜잭션이 블록에 담기는 중입니다",
-  "highPoolInflationWarning": "높은 APR은 인플레이션 보상에서 비롯될 수 있습니다. 주의해서 진행하십시오.",
   "seo": {
     "404": {
       "title": "404 페이지를 찾을 수 없습니다",
@@ -829,6 +830,7 @@
     "allocation": "배당",
     "tokensCount": "{number} 토큰",
     "strategiesCount": "{number} 전략",
+    "oneStrategy": "전략 1개",
     "value": "값",
     "method": "방법",
     "platform": "플랫폼",
@@ -846,8 +848,7 @@
     "allMethods": "모든 방법",
     "platforms": "플랫폼",
     "allPlatforms": "모든 플랫폼",
-    "lockingDuration": "잠금 기간",
-    "specialTokens": "특별 토큰",
+    "allCategories": "모든 카테고리",
     "filters": "필터",
     "resetFilters": "필터 재설정",
     "saveFilters": "필터 저장",
@@ -865,8 +866,26 @@
       "single": "하나의",
       "multi": "다중"
     },
-    "totalValueInvested": "총 투자 가치",
-    "lookBelow": "아래에서 귀하에게 가장 적합한 전략을 찾아보세요."
+    "totalValueInvested": "총 가치",
+    "lookBelow": "아래에서 귀하에게 가장 적합한 전략을 찾아보세요.",
+    "startEarning": "전략 발견",
+    "startEarningDescription": "귀하의 수익 잠재력을 최대한 활용하세요. 아래의 다양한 전략 중 하나를 통해 자산을 활용해 보세요.",
+    "loadingStrategies": "전략 로드 중...",
+    "sorryErrorOccurred": "죄송합니다. 오류가 발생했습니다.",
+    "sorryNoResults": "전략을 찾을 수 없습니다.",
+    "tryChangingFilters": "필터를 바꿔보세요",
+    "retry": "다시 해 보다",
+    "manage": "관리하다",
+    "noLock": "잠금 없음",
+    "riskDisclaimer": "위험은 전략과 기본 자산에 대한 기준을 결합하여 계산됩니다.",
+    "strategyGeoblocked": "죄송합니다. 해당 국가에서는 이 전략을 사용할 수 없습니다."
   },
-  "disclaimer": "부인 성명"
+  "disclaimer": "부인 성명",
+  "unstableAssetsWarning": {
+    "titleDeposit": "{coinDenom} 예금이 불안정함",
+    "titleWithdraw": "{coinDenom} 출금이 불안정함",
+    "description": "불확실한 기술적 문제로 인해 Osmosis와 {prettyChainName} 전송에 상당한 지연이나 거래 실패가 발생할 수 있습니다. 자신의 책임하에 진행하십시오.",
+    "buttonContinue": "계속 진행",
+    "buttonCancel": "취소"
+  }
 }

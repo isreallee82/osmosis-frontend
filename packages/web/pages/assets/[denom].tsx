@@ -1,20 +1,27 @@
 import { Dec } from "@keplr-wallet/unit";
-import { ObservableAssetInfoConfig } from "@osmosis-labs/stores";
+import {
+  CoingeckoCoin,
+  getTokenInfo,
+  ImperatorToken,
+  queryAllTokens,
+  queryCoingeckoCoin,
+  RichTweet,
+  TokenCMSData,
+  Twitter,
+} from "@osmosis-labs/server";
 import { getAssetFromAssetList } from "@osmosis-labs/utils";
 import { observer } from "mobx-react-lite";
 import { GetStaticPathsResult, GetStaticProps } from "next";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import { NextSeo } from "next-seo";
-import { FunctionComponent, useCallback } from "react";
+import { FunctionComponent } from "react";
 import { useMemo } from "react";
 import { useEffect } from "react";
 import { useUnmount } from "react-use";
 
 import { Icon } from "~/components/assets";
-import { Button } from "~/components/buttons";
 import LinkButton from "~/components/buttons/link-button";
-import LinkIconButton from "~/components/buttons/link-icon-button";
 import TokenPairHistoricalChart, {
   ChartUnavailable,
   PriceChartHeader,
@@ -24,33 +31,21 @@ import Spinner from "~/components/loaders/spinner";
 import { SwapTool } from "~/components/swap-tool";
 import TokenDetails from "~/components/token-details/token-details";
 import TwitterSection from "~/components/twitter-section/twitter-section";
+import { LinkIconButton } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import YourBalance from "~/components/your-balance/your-balance";
 import { COINGECKO_PUBLIC_URL, EventName, TWITTER_PUBLIC_URL } from "~/config";
 import { AssetLists } from "~/config/generated/asset-lists";
 import { ChainList } from "~/config/generated/chain-list";
 import {
+  ObservableAssetInfoConfig,
   useAmplitudeAnalytics,
   useCurrentLanguage,
   useTranslation,
+  useUserFavoriteAssetDenoms,
   useWindowSize,
 } from "~/hooks";
-import {
-  useAssetInfoConfig,
-  useFeatureFlags,
-  useLocalStorageState,
-  useNavBar,
-} from "~/hooks";
-import {
-  CoingeckoCoin,
-  queryCoingeckoCoin,
-} from "~/server/queries/coingecko/coin";
-import {
-  getTokenInfo,
-  RichTweet,
-  TokenCMSData,
-  Twitter,
-} from "~/server/queries/external";
-import { ImperatorToken, queryAllTokens } from "~/server/queries/imperator";
+import { useAssetInfoConfig, useFeatureFlags, useNavBar } from "~/hooks";
 import { useStore } from "~/stores";
 import { SUPPORTED_LANGUAGES } from "~/stores/user-settings";
 import { getDecimalCount } from "~/utils/number";
@@ -107,12 +102,9 @@ const AssetInfoView: FunctionComponent<AssetInfoPageProps> = observer(
     const { t } = useTranslation();
     const language = useCurrentLanguage();
     const router = useRouter();
-    const { queriesExternalStore, priceStore } = useStore();
 
     const assetInfoConfig = useAssetInfoConfig(
       router.query.denom as string,
-      queriesExternalStore,
-      priceStore,
       imperatorDenom,
       coingeckoCoin?.id
     );
@@ -195,36 +187,11 @@ const AssetInfoView: FunctionComponent<AssetInfoPageProps> = observer(
       return asset?.rawAsset.name;
     }, [denom, details]);
 
-    const description = useMemo(() => {
-      if (details) {
-        return details.description;
-      }
-
-      const currencies = ChainList.map(
-        (info) => info.keplrChain.currencies
-      ).reduce((a, b) => [...a, ...b]);
-
-      const currency = currencies.find(
-        (el) => el.coinDenom === denom.toUpperCase()
-      );
-
-      if (!currency) {
-        return undefined;
-      }
-
-      const asset = getAssetFromAssetList({
-        coinMinimalDenom: currency?.coinMinimalDenom,
-        assetLists: AssetLists,
-      });
-
-      return asset?.rawAsset.description;
-    }, [denom, details]);
-
     return (
       <AssetInfoViewProvider value={contextValue}>
         <NextSeo
           title={`${title ? `${title} (${denom})` : denom} | Osmosis`}
-          description={description}
+          description={details?.description}
         />
         <main className="flex flex-col gap-8 p-8 py-4 xs:px-2">
           <LinkButton
@@ -250,18 +217,15 @@ const AssetInfoView: FunctionComponent<AssetInfoPageProps> = observer(
           <div className="grid grid-cols-tokenpage gap-4 xl:flex xl:flex-col">
             <div className="flex flex-col gap-4">
               <TokenChartSection />
-
               <YourBalance
                 denom={denom}
                 tokenDetailsByLanguage={tokenDetailsByLanguage}
               />
-
               <TokenDetails
                 denom={denom}
                 tokenDetailsByLanguage={tokenDetailsByLanguage}
                 coingeckoCoin={coingeckoCoin}
               />
-
               <TwitterSection tweets={tweets} />
             </div>
 
@@ -297,10 +261,7 @@ const Navigation = observer((props: NavigationProps) => {
   const { chainStore } = useStore();
   const { t } = useTranslation();
   const language = useCurrentLanguage();
-  const [favoritesList, setFavoritesList] = useLocalStorageState(
-    "favoritesList",
-    ["OSMO", "ATOM"]
-  );
+  const { favoritesList, toggleFavoriteDenom } = useUserFavoriteAssetDenoms();
 
   const details = useMemo(() => {
     return tokenDetailsByLanguage
@@ -312,14 +273,6 @@ const Navigation = observer((props: NavigationProps) => {
     () => favoritesList.includes(denom),
     [denom, favoritesList]
   );
-
-  const toggleFavoriteList = useCallback(() => {
-    if (isFavorite) {
-      setFavoritesList(favoritesList.filter((item) => item !== denom));
-    } else {
-      setFavoritesList([...favoritesList, denom]);
-    }
-  }, [isFavorite, favoritesList, denom, setFavoritesList]);
 
   const chain = useMemo(
     () => chainStore.getChainFromCurrency(denom),
@@ -403,12 +356,13 @@ const Navigation = observer((props: NavigationProps) => {
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-2">
         <Button
-          mode="unstyled"
+          size="md"
+          variant="ghost"
           className="group flex gap-2 rounded-xl bg-osmoverse-850 px-4 py-2 font-semibold text-osmoverse-300 hover:bg-osmoverse-700 active:bg-osmoverse-800"
           aria-label="Add to watchlist"
-          onClick={toggleFavoriteList}
+          onClick={() => toggleFavoriteDenom(denom)}
         >
           <Icon
             id="star"
@@ -421,8 +375,6 @@ const Navigation = observer((props: NavigationProps) => {
         {twitterUrl && (
           <LinkIconButton
             href={twitterUrl}
-            mode="icon-social"
-            size="md-icon-social"
             target="_blank"
             rel="external"
             aria-label={t("tokenInfos.ariaViewOn", { name: "X" })}
@@ -432,27 +384,20 @@ const Navigation = observer((props: NavigationProps) => {
         {websiteURL && (
           <LinkIconButton
             href={websiteURL}
-            mode="icon-social"
-            size="md-icon-social"
             target="_blank"
             rel="external"
             aria-label={t("tokenInfos.ariaView", { name: "website" })}
-            icon={<Icon className="w-h-6 h-6 text-osmoverse-400" id="web" />}
+            icon={<Icon className="h-6 w-6 text-osmoverse-400" id="web" />}
           />
         )}
         {coingeckoURL && (
           <LinkIconButton
             href={coingeckoURL}
-            mode="icon-social"
-            size="md-icon-social"
             target="_blank"
             rel="external"
             aria-label={t("tokenInfos.ariaViewOn", { name: "CoinGecko" })}
             icon={
-              <Icon
-                className="h-10.5 w-10.5 text-osmoverse-300"
-                id="coingecko"
-              />
+              <Icon className="h-9 w-9 text-osmoverse-300" id="coingecko" />
             }
           />
         )}
@@ -463,8 +408,10 @@ const Navigation = observer((props: NavigationProps) => {
 
 const TokenChartSection = () => {
   return (
-    <section className="flex flex-col justify-between gap-3 overflow-hidden rounded-5xl bg-osmoverse-850 p-8 md:p-6">
-      <TokenChartHeader />
+    <section className="flex flex-col justify-between gap-3 overflow-hidden rounded-5xl bg-osmoverse-850 pb-8 md:pb-6">
+      <div className="p-8 pb-0 md:p-6">
+        <TokenChartHeader />
+      </div>
       <TokenChart />
     </section>
   );
@@ -481,10 +428,41 @@ const TokenChartHeader = observer(() => {
     minimumDecimals
   );
 
+  /**
+   * We need to know how long the integer part of the number is in order to calculate then how many decimal places.
+   */
+  const integerPartLength =
+    assetInfoConfig.hoverPrice?.toDec().truncate().toString().length ?? 0;
+
+  /**
+   * If a number is less then $100, we only show 4 significant digits, examples:
+   *  OSMO: $1.612
+   *  AXL: $0.9032
+   *  STARS: $0.03673
+   *  HUAHUA: $0.00001231
+   *
+   * If a number is greater or equal to $100, we show a dynamic significant digits based on it's integer part, examples:
+   * BTC: $47,334.21
+   * ETH: $3,441.15
+   */
+  const maximumSignificantDigits = assetInfoConfig.hoverPrice
+    ?.toDec()
+    .lt(new Dec(100))
+    ? 4
+    : integerPartLength + 2;
+
   return (
     <header>
       <SkeletonLoader isLoaded={Boolean(assetInfoConfig?.hoverPrice)}>
         <PriceChartHeader
+          formatOpts={{
+            notation: "standard",
+            maximumSignificantDigits,
+            minimumSignificantDigits: maximumSignificantDigits,
+            minimumFractionDigits: 4,
+            maximumFractionDigits: 4,
+            disabledTrimZeros: true,
+          }}
           decimal={maxDecimals}
           showAllRange
           hoverPrice={Number(
@@ -550,11 +528,11 @@ const TokenChart = observer(() => {
 
   return (
     <div className="h-[370px] w-full xl:h-[250px]">
-      {assetInfoConfig.isHistoricalChartLoading ? (
+      {assetInfoConfig.isHistoricalDataLoading ? (
         <div className="flex h-full flex-col items-center justify-center">
           <Spinner />
         </div>
-      ) : !assetInfoConfig.isHistoricalChartUnavailable ? (
+      ) : !assetInfoConfig.historicalChartUnavailable ? (
         <>
           <TokenPairHistoricalChart
             minimal

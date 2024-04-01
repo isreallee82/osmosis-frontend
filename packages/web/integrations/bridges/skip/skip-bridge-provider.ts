@@ -1,10 +1,13 @@
 import { fromBech32, toBech32 } from "@cosmjs/encoding";
 import { CoinPretty } from "@keplr-wallet/unit";
+import { getAssetPrice, getTimeoutHeight } from "@osmosis-labs/server";
 import { cosmosMsgOpts } from "@osmosis-labs/stores";
 import cachified from "cachified";
 import { ethers, JsonRpcProvider } from "ethers";
 import { toHex } from "web3-utils";
 
+import { AssetLists } from "~/config/generated/asset-lists";
+import { ChainList } from "~/config/generated/chain-list";
 import { EthereumChainInfo } from "~/integrations/bridge-info";
 import { BridgeQuoteError } from "~/integrations/bridges/errors";
 import SkipApiClient from "~/integrations/bridges/skip/queries";
@@ -12,8 +15,6 @@ import {
   Erc20Abi,
   NativeEVMTokenConstantAddress,
 } from "~/integrations/ethereum";
-import { getAssetPrice } from "~/server/queries/complex/assets/price";
-import { getTimeoutHeight } from "~/server/queries/complex/get-timeout-height";
 import { ErrorTypes } from "~/utils/error-types";
 
 import {
@@ -126,6 +127,8 @@ export class SkipBridgeProvider implements BridgeProvider {
         );
 
         const inputAssetPriceUSD = await getAssetPrice({
+          assetLists: AssetLists,
+          chainList: ChainList,
           asset: {
             coinDenom: toAsset.denom,
             coinMinimalDenom: toAsset.denom ?? "",
@@ -133,12 +136,10 @@ export class SkipBridgeProvider implements BridgeProvider {
           },
           currency: "usd",
         });
-
-        if (!inputAssetPriceUSD) {
-          throw new Error(`Failed to get input ${fromAsset.denom} price`);
-        }
 
         const outputAssetPriceUSD = await getAssetPrice({
+          assetLists: AssetLists,
+          chainList: ChainList,
           asset: {
             coinDenom: toAsset.denom,
             coinMinimalDenom: toAsset.denom ?? "",
@@ -146,10 +147,6 @@ export class SkipBridgeProvider implements BridgeProvider {
           },
           currency: "usd",
         });
-
-        if (!outputAssetPriceUSD) {
-          throw new Error(`Failed to get output ${toAsset.denom} price`);
-        }
 
         let transferFee: BridgeCoin = {
           amount: "0",
@@ -165,6 +162,8 @@ export class SkipBridgeProvider implements BridgeProvider {
         for (const operation of route.operations) {
           if ("axelar_transfer" in operation) {
             const feeAssetPrice = await getAssetPrice({
+              assetLists: AssetLists,
+              chainList: ChainList,
               asset: {
                 coinDenom:
                   operation.axelar_transfer.fee_asset.symbol ??
@@ -174,12 +173,6 @@ export class SkipBridgeProvider implements BridgeProvider {
               },
               currency: "usd",
             });
-
-            if (!feeAssetPrice) {
-              throw new Error(
-                `Failed to get fee asset ${operation.axelar_transfer.asset} price`
-              );
-            }
 
             const feeAmount = new CoinPretty(
               {
@@ -244,6 +237,8 @@ export class SkipBridgeProvider implements BridgeProvider {
 
         const gasAssetPriceUSD = gasCost
           ? await getAssetPrice({
+              assetLists: AssetLists,
+              chainList: ChainList,
               asset: {
                 coinDenom: gasCost?.denom ?? "",
                 sourceDenom: gasCost?.sourceDenom ?? "",
@@ -338,6 +333,7 @@ export class SkipBridgeProvider implements BridgeProvider {
     const messageData = JSON.parse(message.msg);
 
     const timeoutHeight = await getTimeoutHeight({
+      chainList: ChainList,
       destinationAddress: messageData.receiver,
     });
 
