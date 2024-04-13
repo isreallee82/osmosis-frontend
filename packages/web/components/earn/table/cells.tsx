@@ -38,13 +38,13 @@ export const StrategyNameCell = (item: CellContext<EarnStrategy, string>) => {
       </p>
       <div className="flex items-center gap-2">
         <small className="text-left text-sm font-subtitle1 capitalize text-osmoverse-400 1.5xs:text-xs">
-          {item.row.original.platform}
+          {item.row.original.platform} · {item.row.original.type}
         </small>
-        <div className="flex items-center justify-center rounded-xl bg-[#9D23E8] px-2">
+        {/*  <div className="flex items-center justify-center rounded-xl bg-[#9D23E8] px-2">
           <span className="text-white overflow-hidden text-ellipsis whitespace-nowrap text-sm font-subtitle1 leading-6 1.5xs:text-xs">
             {item.row.original.category}
           </span>
-        </div>
+        </div> */}
       </div>
     </>
   );
@@ -161,11 +161,11 @@ export const LockCell = (item: CellContext<EarnStrategy, string>) => {
   return (
     <div className="flex flex-col">
       <ColumnCellCell>
-        {hasLockingDuration ? lockingDuration : "N/A"}
+        {hasLockingDuration ? lockingDuration : "Instant"}
       </ColumnCellCell>
       {hasLockingDuration && (
         <small className="text-sm font-subtitle2 text-osmoverse-400">
-          {t("earnPage.days")}
+          {t(lockingDuration <= 1 ? "earnPage.day" : "earnPage.days")}
         </small>
       )}
     </div>
@@ -173,18 +173,24 @@ export const LockCell = (item: CellContext<EarnStrategy, string>) => {
 };
 
 function _getRiskLabel(risk: number) {
-  if (risk <= 0.25) return "Low";
-  else if (risk <= 0.5) return "Medium";
-  else if (risk <= 0.75) return "High";
-  else if (risk <= 1) return "Very High";
-  else return "Very Low";
+  return `${Math.floor(risk * 100)}%`;
 }
 
 export const RiskCell = (item: CellContext<EarnStrategy, number>) => {
+  const RiskLink =
+    item.row.original.riskReportUrl &&
+    item.row.original.riskReportUrl.length > 0
+      ? Link
+      : "div";
+
   return (
     <div className="flex items-center justify-center">
       <div className="flex flex-col items-center gap-1">
-        <div className="relative h-6">
+        <RiskLink
+          href={item.row.original.riskReportUrl ?? ""}
+          className="relative h-6"
+          target="_blank"
+        >
           <Image
             src={"/images/risk-indicator-bg.svg"}
             alt="Risk indicator background"
@@ -199,7 +205,7 @@ export const RiskCell = (item: CellContext<EarnStrategy, number>) => {
             className="absolute left-3.5 -top-1 h-11 w-2"
             style={{ rotate: `${item.getValue() * 180 - 90}deg` }}
           />
-        </div>
+        </RiskLink>
         <p className="text-caption text-osmoverse-200">
           {_getRiskLabel(item.getValue())}
         </p>

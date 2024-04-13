@@ -176,7 +176,6 @@
       "titleWithdraw": "Sacar para"
     },
     "stakedAssets": "OSMO em stake",
-    "pooledAssets": "Agrupados",
     "table": {
       "columns": {
         "assetChain": "Ativo / Rede",
@@ -288,6 +287,14 @@
       "liquid_staking": "Estaqueamento líquido"
     }
   },
+  "portfolio": {
+    "trade": "Troca",
+    "yourAssets": "Seus ativos",
+    "yourPositions": "Suas posições",
+    "recentTransfers": "Transferências recentes",
+    "yourSuperchargedPositions": "Suas posições sobrecarregadas",
+    "yourLiquidityPools": "Seus pools de liquidez"
+  },
   "buyTokens": "Comprar tokens",
   "components": {
     "fiatOnrampSelection": {
@@ -392,6 +399,7 @@
   },
   "menu": {
     "assets": "Ativos",
+    "portfolio": "Portfólio",
     "help": "Apoiar",
     "info": "Status",
     "pools": "Piscinas",
@@ -775,6 +783,10 @@
       "title": "Ativos de Osmose",
       "description": "Navegue por todos os ativos disponíveis na Osmosis - a principal exchange descentralizada do Cosmos"
     },
+    "portfolio": {
+      "title": "Portfólio de Osmose",
+      "description": "Veja seus ativos na Osmosis - a bolsa descentralizada líder do Cosmos"
+    },
     "disclaimer": {
       "title": "Isenção de responsabilidade de osmose",
       "description": "Leia o aviso de isenção de responsabilidade e a política de privacidade da Osmosis - a principal bolsa descentralizada do Cosmos"
@@ -832,23 +844,24 @@
     "strategiesCount": "{number} estratégias",
     "oneStrategy": "1 estratégia",
     "value": "Valor",
-    "method": "Método",
+    "method": "Tipo",
     "platform": "Plataforma",
     "scrollToSeeMore": "role para ver mais",
     "discoverStrategies": "Descubra estratégias",
-    "myStrategies": "Minhas estratégias",
-    "strategyPlatform": "Estratégia/Plataforma",
-    "apy": "APY",
+    "myStrategies": "Suas estratégias",
+    "strategyPlatform": "Estratégia",
+    "apy": "ABRIL",
     "daily": "Diário",
     "reward": "Recompensa",
-    "lock": "Trancar",
+    "lock": "Desvincular",
     "days": "dias",
+    "day": "dia",
     "risk": "Risco",
-    "strategyMethod": "Método de Estratégia",
-    "allMethods": "Todos os métodos",
+    "strategyMethod": "Tipos",
+    "allMethods": "Todos os tipos",
     "platforms": "Plataformas",
     "allPlatforms": "Todas as plataformas",
-    "allCategories": "todas as categorias",
+    "allCategories": "Todas as categorias",
     "filters": "Filtros",
     "resetFilters": "Redefinir filtros",
     "saveFilters": "Salvar filtros",
@@ -858,8 +871,8 @@
     "claimAllRewards": "Reivindique todas as recompensas",
     "join": "Juntar",
     "tokenFilterOptions": {
-      "my": "Meus tokens",
-      "all": "Todos os tokens"
+      "my": "Seus ativos",
+      "all": "Todos os ativos"
     },
     "rewardTypes": {
       "all": "Todos",
@@ -868,17 +881,41 @@
     },
     "totalValueInvested": "Valor total",
     "lookBelow": "Veja abaixo e encontre as melhores estratégias para você",
-    "startEarning": "Descubra estratégias",
-    "startEarningDescription": "Desbloqueie todo o seu potencial de ganhos. Coloque seus ativos em ação por meio de uma das muitas estratégias abaixo.",
+    "startEarningDescription": "Desbloqueie todo o seu potencial de ganhos. Coloque seus ativos em ação por meio das diversas estratégias abaixo.",
     "loadingStrategies": "Carregando estratégias...",
     "sorryErrorOccurred": "Desculpe, ocorreu um erro.",
+    "sorryNoResultsWithAssets": "Nenhuma estratégia encontrada associada aos seus recursos.",
     "sorryNoResults": "Nenhuma estratégia encontrada.",
     "tryChangingFilters": "Tente alterar os filtros",
     "retry": "Tentar novamente",
     "manage": "Gerenciar",
     "noLock": "Não feche",
     "riskDisclaimer": "O risco é calculado com um conjunto combinado de critérios sobre uma estratégia e seus ativos subjacentes.",
-    "strategyGeoblocked": "Lamentamos, esta estratégia não está disponível no seu país."
+    "strategyGeoblocked": "Lamentamos, esta estratégia não está disponível no seu país.",
+    "instantUnbondOnly": "Somente desvinculação instantânea",
+    "tooltips": {
+      "apr": {
+        "description": "A Taxa Percentual Anual (APR) refere-se ao retorno percentual anualizado de uma estratégia. Nota: O retorno de uma estratégia pode variar com base na participação e no desempenho."
+      },
+      "daily": {
+        "description": "Retorno percentual diário de uma estratégia - semelhante à TAEG, mas refletindo o retorno diário em vez do anual. Nota: O retorno de uma estratégia pode variar com base na participação e no desempenho."
+      },
+      "tvl": {
+        "description": "Valor Total Bloqueado (TVL) refere-se ao valor total em dólares americanos dos ativos depositados na estratégia."
+      },
+      "reward": {
+        "description": "O tipo de ativos obtidos através das operações e/ou incentivos da estratégia."
+      },
+      "lock": {
+        "description": "O período de tempo em que uma posição fica vinculada antes de poder ser encerrada. Nota: Nem todos os períodos de desvinculação da estratégia* têm distribuições de recompensas."
+      },
+      "strategy": {
+        "description": "Oportunidades de ganhos de vários tipos, hospedadas em diversas plataformas, estão disponíveis no Osmosis. O acesso a uma estratégia exige o depósito de ativos específicos."
+      },
+      "risk": {
+        "description": "A avaliação de risco envolve considerar uma combinação de critérios relacionados a uma estratégia e seus ativos subjacentes."
+      }
+    }
   },
   "disclaimer": "Isenção de responsabilidade",
   "unstableAssetsWarning": {
