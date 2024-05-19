@@ -1,7 +1,5 @@
 import { ChainRecord, Wallet } from "@cosmos-kit/core";
-
-import { ChainWC } from "~/integrations/core-walletconnect";
-
+import { ChainWC } from "@cosmos-kit/walletconnect";
 import { TrustClient } from "./client";
 
 export class ChainTrustMobile extends ChainWC {
