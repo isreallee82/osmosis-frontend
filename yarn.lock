@@ -2439,7 +2439,7 @@
     "@cosmjs/math" "0.28.13"
     "@cosmjs/utils" "0.28.13"
 
-"@cosmjs/amino@0.32.3", "@cosmjs/amino@^0.32.2", "@cosmjs/amino@^0.32.3":
+"@cosmjs/amino@0.32.3", "@cosmjs/amino@^0.32.3":
   version "0.32.3"
   resolved "https://registry.yarnpkg.com/@cosmjs/amino/-/amino-0.32.3.tgz#b81d4a2b8d61568431a1afcd871e1344a19d97ff"
   integrity sha512-G4zXl+dJbqrz1sSJ56H/25l5NJEk/pAPIr8piAHgbXYw88OdAOlpA26PQvk2IbSN/rRgVbvlLTNgX2tzz1dyUA==
@@ -2489,7 +2489,7 @@
     "@cosmjs/math" "^0.31.3"
     "@cosmjs/utils" "^0.31.3"
 
-"@cosmjs/cosmwasm-stargate@0.32.3", "@cosmjs/cosmwasm-stargate@^0.32.2", "@cosmjs/cosmwasm-stargate@^0.32.3":
+"@cosmjs/cosmwasm-stargate@0.32.3", "@cosmjs/cosmwasm-stargate@^0.32.3":
   version "0.32.3"
   resolved "https://registry.yarnpkg.com/@cosmjs/cosmwasm-stargate/-/cosmwasm-stargate-0.32.3.tgz#26a110a6bb0c15fdeef647e3433bd9553a1acd5f"
   integrity sha512-pqkt+QsLIPNMTRh9m+igJgIpzXXgn1BxmxfAb9zlC23kvsuzY/12un9M7iAdim1NwKXDFeYw46xC2YkprwQp+g==
@@ -2889,7 +2889,7 @@
     cosmjs-types "^0.4.0"
     long "^4.0.0"
 
-"@cosmjs/proto-signing@0.32.3", "@cosmjs/proto-signing@^0.32.2", "@cosmjs/proto-signing@^0.32.3":
+"@cosmjs/proto-signing@0.32.3", "@cosmjs/proto-signing@^0.32.3":
   version "0.32.3"
   resolved "https://registry.yarnpkg.com/@cosmjs/proto-signing/-/proto-signing-0.32.3.tgz#91ae149b747d18666a6ccc924165b306431f7c0d"
   integrity sha512-kSZ0ZUY0DwcRT0NcIn2HkadH4NKlwjfZgbLj1ABwh/4l0RgeT84QCscZCu63tJYq3K6auwqTiZSZERwlO4/nbg==
@@ -3068,7 +3068,7 @@
     protobufjs "~6.11.3"
     xstream "^11.14.0"
 
-"@cosmjs/stargate@0.32.3", "@cosmjs/stargate@^0.32.2", "@cosmjs/stargate@^0.32.3":
+"@cosmjs/stargate@0.32.3", "@cosmjs/stargate@^0.32.3":
   version "0.32.3"
   resolved "https://registry.yarnpkg.com/@cosmjs/stargate/-/stargate-0.32.3.tgz#5a92b222ada960ebecea72cc9f366370763f4b66"
   integrity sha512-OQWzO9YWKerUinPIxrO1MARbe84XkeXJAW0lyMIjXIEikajuXZ+PwftiKA5yA+8OyditVmHVLtPud6Pjna2s5w==
@@ -3448,23 +3448,6 @@
   dependencies:
     "@cosmology/types" "^1.5.0"
     dotty "0.1.2"
-
-"@cosmos-kit/core@2.8.9":
-  version "2.8.9"
-  resolved "https://registry.yarnpkg.com/@cosmos-kit/core/-/core-2.8.9.tgz#3e6b40fa14c5d143065d3ec6a894e386f95ea4ad"
-  integrity sha512-e0Fqbut9mqHlFS6QnLSbU8AFYPtXUcKVaMJsL1dKbfTotACsECgnAs4gzXaTFo3sTwEJrNZ6cq86qvqV85X6uw==
-  dependencies:
-    "@chain-registry/client" "^1.18.0"
-    "@chain-registry/types" "0.17.0"
-    "@cosmjs/amino" "^0.32.2"
-    "@cosmjs/cosmwasm-stargate" "^0.32.2"
-    "@cosmjs/proto-signing" "^0.32.2"
-    "@cosmjs/stargate" "^0.32.2"
-    "@walletconnect/types" "2.11.0"
-    bowser "2.11.0"
-    cosmjs-types "^0.9.0"
-    events "3.3.0"
-    uuid "^9.0.1"
 
 "@cosmos-kit/core@^2.10.0", "@cosmos-kit/core@^2.8.9":
   version "2.10.0"
