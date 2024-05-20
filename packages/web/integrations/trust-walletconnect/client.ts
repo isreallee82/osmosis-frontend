@@ -14,7 +14,13 @@ export class TrustClient extends WCClient {
     signDoc: StdSignDoc,
     signOptions?: SignOptions
   ): Promise<AminoSignResponse> {
-    throw new Error("Trust doesn't support `signAmino` method.");
+    const result = (await this._signAmino(
+      chainId,
+      signer,
+      signDoc,
+      signOptions
+    )) as AminoSignResponse;
+    return result;
   }
 
   async signDirect(
