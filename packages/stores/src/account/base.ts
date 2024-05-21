@@ -62,7 +62,6 @@ import {
   TxBody,
   TxRaw,
 } from "cosmjs-types/cosmos/tx/v1beta1/tx";
-import Long from "long";
 import { LRUCache } from "lru-cache";
 import { action, makeObservable, observable, runInAction } from "mobx";
 import { fromPromise, IPromiseBasedObservable } from "mobx-utils";
@@ -194,12 +193,12 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
   private _createWalletManager(wallets: MainWalletBase[]) {
     this._walletManager = new WalletManager(
       this.chains,
-      this.walletManagerAssets,
       wallets,
       logger,
       true,
       true,
       false,
+      this.walletManagerAssets,
       "icns",
       this.options.walletConnectOptions,
       {
@@ -950,7 +949,7 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
           signerAddress,
           {
             ...signDoc,
-            accountNumber: Long.fromString(signDoc.accountNumber.toString()),
+            accountNumber: BigInt(signDoc.accountNumber.toString()),
           },
           signOptions
         )
