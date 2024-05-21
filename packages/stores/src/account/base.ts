@@ -949,7 +949,7 @@ export class AccountStore<Injects extends Record<string, any>[] = []> {
           signerAddress,
           {
             ...signDoc,
-            accountNumber: BigInt(signDoc.accountNumber.toString()),
+            accountNumber: BigInt(signDoc.accountNumber),
           },
           signOptions
         )
